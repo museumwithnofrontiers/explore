@@ -1,186 +1,182 @@
 import {
-  languageLabels, mwnfLinks, offeredLanguages, sectionMeta, useDataPackage,
+  languageLabels, mediaUrl, mwnfLinks, offeredLanguages, sectionMeta, useDataPackage,
 } from '@museumwnf/viewer-core'
-import {
-  CatalogueResultsView, HomeView, RecordView, SearchFormView, TextPageView,
-} from '@museumwnf/viewer-layout/views'
+import { TextPageView } from '@museumwnf/viewer-layout/views'
 import SiteShell from './SiteShell.vue'
-import { catalogueResultsSpec, catalogueSearchSpec, itemSheetSpec } from './composables/catalogue.js'
+import ExploreHome from './views/ExploreHome.vue'
+import MonumentPage from './views/MonumentPage.vue'
+import PlacePage from './views/PlacePage.vue'
+import ThemePage from './views/ThemePage.vue'
+import { banner, exploreCollection, resolveLegacyPath, title } from './composables/explore.js'
 
-// The whole declaration of this website. Before it mounts, the website reads
-// nothing from its package but the manifest: the languages it offers, their
-// labels and its name come from `manifest.site`, and every record is loaded by
-// the route that reads it. Nothing else in `src/` imports `@inventory-data`.
+// The whole declaration of Explore with MWNF. Before it mounts, the website
+// reads nothing from its package but the manifest: the languages it offers,
+// their labels and its name come from `manifest.site`, and every record is
+// loaded by the route that reads it. Nothing else in `src/` imports
+// `@inventory-data`.
+//
+// The package (@museumwnf/explore-data, inventory-app
+// scripts/exporters/docs/explore-data-package.md) is Explore's collection tree:
+// themes, countries with their territories and locations, and the monuments
+// the locations hold. The pages are this website's own (src/views), made of
+// viewer-layout's blocks; `composables/explore.js` holds the rules legacy
+// applied, from the inventory-app analysis doc.
 
 const { manifest } = useDataPackage()
 
-// The languages the package declares for this site, kept where the item
-// translations actually carry them. Pass `{ declared: [...] }` to offer fewer
-// than the package declares — a site whose chrome is English-only, say.
-//
-// A record may carry more languages than the site offers; its own page reads
-// those from `useRecordLanguage`, without touching the site language.
+// The languages the package declares for the site, kept where the items
+// carry them. Explore's own texts are English; a theme or a monument may be
+// read in more, through its own "Read in" buttons.
 const languages = offeredLanguages()
 
-// Every route names the section it belongs to and the entities its own view
-// reads on top of that; this website has no chrome entities every page loads
-// regardless, so `sectionMeta()` takes none.
-const meta = sectionMeta()
+// Every route names the section it belongs to and the entities its view
+// reads. Every page shows the banner and the partnerships, which live on the
+// collection tree's root, so every route reads the collections.
+const meta = sectionMeta(['collections', 'languages'])
 
-// The About page: viewer-layout's TextPageView on one body entry and a link
-// back to the landing page — no records, no facets. A second static page
-// (credits, a legal notice) is one more spec and one more route the same way.
-const about = {
-  body: 'explore.about.body',
-  back: { label: 'core.action.back', to: { name: 'home' } },
-}
+const back = { label: 'core.action.back', to: { name: 'home' } }
+const textPage = (body) => ({ spec: { body, back } })
+
+const siteName = manifest.site?.names?.en ?? 'Explore'
 
 export default {
   // The dataset package this website renders. Must match the alias in
   // vite.config.js and the dependency in package.json.
   datasetPackage: '@museumwnf/explore-data',
 
-  // The website's name, as the package declares it. The fallback is what a
-  // package predating `manifest.site` still shows.
-  siteName: manifest.site?.names?.en ?? 'explore',
+  siteName,
 
   features: {
-    // No generic entity pages. viewer-core can publish one list and one detail
-    // page per exported entity, which is useful for looking at a new dataset
-    // and wrong for a website: those routes expose the data package's shape
-    // rather than the site's. Set `entities: entityNames` from
-    // `useDataPackage()` temporarily while exploring; ship `[]`.
+    // No generic entity pages: those routes expose the data package's shape
+    // rather than the site's.
     entities: [],
   },
 
-  // The three slots every website has — the home page, a list page, a record
-  // page — are the composed views of viewer-layout: pages made of the shared
-  // components on the shared engine, driven by the declarations below rather
-  // than by a page written here. `home` is the route `/`; `list` and `detail`
-  // are what `features.entities` would publish, named here so that switching
-  // it on while exploring a dataset shows real pages too. A website whose
-  // page is not that shape writes its own component on the same components,
-  // and registers it on the same route name; nothing else changes.
-  views: { home: HomeView, list: CatalogueResultsView, detail: RecordView },
-
-  // What the landing page shows. Every text is an entry name, written out,
-  // that the view resolves — a translator's file changes the page. The
-  // record on display is one item with an image, picked once per visit.
-  home: {
-    title: 'explore.identity.title',
-    intro: 'explore.home.intro',
-    cards: [
-      {
-        title: 'explore.nav.catalogue',
-        description: 'explore.home.catalogueText',
-        action: 'core.action.browse',
-        to: { name: 'catalogue' },
-      },
-      {
-        title: 'explore.nav.search',
-        description: 'explore.home.searchText',
-        action: 'core.action.search',
-        to: { name: 'search' },
-      },
-    ],
-    featured: {
-      entity: 'items',
-      heading: 'explore.home.itemOnDisplay',
-      action: 'core.action.viewDetails',
-      route: 'item',
-      eyebrow: 'type',
-      meta: ['location', 'dates'],
-    },
-  },
-
-  // The site language. One per visit, negotiated once by viewer-core: an
-  // explicit `?lang=`, then the remembered choice, then the browser, then
-  // English.
   languages,
 
   shell: SiteShell,
 
-  // Everything @museumwnf/viewer-layout's SiteShell reads to build the menu,
-  // the language switcher, the header/footer link lists and the search
-  // submit — see its README, "Site shell". A label is an entry name, resolved
-  // by SiteShell itself (it installs the catalogue), so nothing here builds
-  // menu markup by hand any more.
+  // The menu is legacy's green bar, the ways into the site; the header's
+  // links are legacy's own pages; the footer's, MWNF's.
   navigation: {
     languages: languageLabels(languages),
     links: [
       { section: 'home', label: 'core.nav.home', to: { name: 'home' } },
-      { section: 'catalogue', label: 'explore.nav.catalogue', to: { name: 'catalogue' } },
-      { section: 'search', label: 'explore.nav.search', to: { name: 'search' } },
-      { section: 'about', label: 'explore.nav.about', to: { name: 'about' } },
+      { section: 'themes', label: 'explore.nav.byTheme', to: { name: 'home', hash: '#explore-by-theme' } },
+      { section: 'countries', label: 'explore.nav.byCountry', to: { name: 'home', hash: '#explore-by-country' } },
+    ],
+    headerLinks: [
+      { label: 'explore.nav.whatsNew', to: { name: 'new' } },
+      { label: 'core.nav.about', to: { name: 'about' } },
+      { label: 'core.nav.credits', to: { name: 'credits' } },
+      { label: 'explore.nav.getInvolved', to: { name: 'get-involved' } },
+    ],
+    footerLinks: [
+      { label: 'explore.nav.mwnfHome', href: mwnfLinks.portal, external: true },
+      { label: 'core.footer.aboutMwnf', href: mwnfLinks.about, external: true },
+      { label: 'core.footer.contact', href: mwnfLinks.contact, external: true },
+      { label: 'explore.nav.importantInformation', to: { name: 'important-information' } },
+      { label: 'core.footer.legalNotice', href: mwnfLinks.legalNotice, external: true },
+      { label: 'core.footer.credits', href: mwnfLinks.credits, external: true },
+      { label: 'core.footer.cookies', href: mwnfLinks.cookies, external: true },
     ],
   },
 
-  // Where this website's media lives. `mediaUrl(path, size)` builds an address
-  // from a path the data package carries; no view reads `import.meta.env` and
-  // no host is written anywhere but here.
+  // Legacy's banner, on every page: one of the home banners drawn per visit,
+  // the site's name and its leitmotif over it, and what it shows as its
+  // caption.
+  banner: {
+    variant: 'strip',
+    image: () => mediaUrl(banner.value?.image) ?? '',
+    title: () => siteName,
+    subtitle: 'explore.home.leitmotif',
+    caption: ({ locale }) => {
+      const shown = banner.value
+      if (!shown) return ''
+      return {
+        name: shown.name ?? '',
+        location: title(exploreCollection('location', shown.location), locale),
+        country: title(exploreCollection('country', shown.country), locale),
+      }
+    },
+  },
+
+  // Where the site records' pictures live: the legacy media server, which the
+  // package's paths point into.
   media: {
     legacyHost: 'https://images.museumwnf.org',
   },
 
-  // Every address this website links out to, by name. `mwnfLinks` is the
-  // portal and its siblings every website links to; a website adds to it
-  // rather than copying it (`links: { ...mwnfLinks, ownPage: '...' }`).
   links: mwnfLinks,
 
-  // The route map. Every route is named, sections are kebab-case, the page
-  // and every filter live in the query, and each route says which section it
-  // belongs to (the shell reads `useSection()` for the banner and the menu).
-  // Each route declares the entities its view reads, so the router loads them
-  // before the view is created and no page renders against records that are
-  // not there yet.
-  //
-  // The 'home' name is the slot `views.home` fills. The routes below are the
-  // search form, the results page, the record page and the About page on the
-  // composed views, each driven by a spec passed as route props: the search
-  // spec says which fields the keyword rows search, the catalogue spec what
-  // the list filters on and how a row looks, the sheet spec which fields a
-  // record shows under which labels, and the about spec is one body entry.
-  //
-  // A gallery or an exhibition does not start from this template: it starts
-  // from gallery-template or exhibition-template, whose pages are the DXA
-  // family's (decision D5, inventory-app#1510).
+  // The route map. A record is addressed by its package id; the way it is
+  // explored — the theme, the filter, the location a monument is seen
+  // from — travels in the query.
   extraViews: [
     {
-      path: '/search',
-      name: 'search',
-      component: SearchFormView,
-      props: { spec: catalogueSearchSpec },
-      meta: meta('search', 'items'),
+      path: '/',
+      name: 'home',
+      component: ExploreHome,
+      meta: meta('home'),
     },
     {
-      path: '/catalogue',
-      name: 'catalogue',
-      component: CatalogueResultsView,
-      props: { spec: catalogueResultsSpec },
-      meta: meta('catalogue', 'items', 'countries'),
+      path: '/theme/:id',
+      name: 'theme',
+      component: ThemePage,
+      props: true,
+      meta: meta('themes'),
     },
     {
-      path: '/item/:id',
-      name: 'item',
-      component: RecordView,
-      props: (route) => ({ spec: itemSheetSpec, id: route.params.id }),
-      meta: meta('catalogue', 'items', 'countries', 'partners'),
+      path: '/country/:id',
+      name: 'country',
+      component: PlacePage,
+      props: true,
+      meta: meta('explore', 'items'),
     },
     {
-      path: '/about',
-      name: 'about',
+      path: '/territory/:id',
+      name: 'territory',
+      component: PlacePage,
+      props: true,
+      meta: meta('explore', 'items'),
+    },
+    {
+      path: '/location/:id',
+      name: 'location',
+      component: PlacePage,
+      props: true,
+      meta: meta('explore', 'items'),
+    },
+    {
+      path: '/monument/:id',
+      name: 'monument',
+      component: MonumentPage,
+      props: true,
+      meta: meta('explore', 'items'),
+    },
+    { path: '/about', name: 'about', component: TextPageView, props: textPage('explore.about.body'), meta: meta('about') },
+    { path: '/credits', name: 'credits', component: TextPageView, props: textPage('explore.credits.body'), meta: meta('credits') },
+    {
+      path: '/get-involved',
+      name: 'get-involved',
       component: TextPageView,
-      props: { spec: about },
-      meta: meta('about'),
+      props: textPage('explore.getInvolved.body'),
+      meta: meta('get-involved'),
     },
+    {
+      path: '/important-information',
+      name: 'important-information',
+      component: TextPageView,
+      props: textPage('explore.importantInformation.body'),
+      meta: meta('important-information'),
+    },
+    { path: '/new', name: 'new', component: TextPageView, props: textPage('explore.whatsNew.body'), meta: meta('new') },
   ],
 
-  // Addresses this website was published under before, each resolving onto a
-  // canonical route above. Redirect-only: no view, no second way to reach a
-  // page. A website that has never moved leaves this empty.
-  legacyRoutes: [],
-
-  // The unmatched-address page is viewer-core's, on a catch-all it adds
-  // itself. Pass `notFound: false` to leave it out, or a component to replace
-  // it — do not declare a `/:pathMatch(.*)*` route here.
+  // Legacy's addresses — `/themes/t-1/c-es/l-337/m-557/lan-en`,
+  // `/countries/c-es/l-337` — each resolving onto the page it names.
+  legacyRoutes: [
+    { path: '/themes/:path(.*)', resolve: (params) => resolveLegacyPath(params.path) },
+    { path: '/countries/:path(.*)', resolve: (params) => resolveLegacyPath(params.path) },
+  ],
 }

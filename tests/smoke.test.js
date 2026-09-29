@@ -12,98 +12,185 @@ import config from '../src/dataset.config.js'
 // nothing about the chrome — every text would render as its own name.
 const messages = mergeMessages(sharedTexts, { en: ownTexts })
 
+// Every page is mounted against the real data package, on its own address,
+// as a visitor arrives from a link. The numbers are legacy's: what the live
+// site showed on the same page (inventory-app
+// scripts/exporters/docs/explore-legacy-analysis.md).
+async function mountOn(hash, selector) {
+  const site = await mountSite(config, messages, hash)
+  await vi.waitFor(() => expect(site.host.querySelector(selector)).not.toBeNull(), { timeout: 30000 })
+  return site
+}
+
+async function collection(key) {
+  const [collections] = await loadEntities(['collections'])
+  return collections.find((c) => c.backward_compatibility === key)
+}
+
+const texts = (host, selector) => [...host.querySelectorAll(selector)].map((node) => node.textContent.trim())
+
 describe('website smoke test', () => {
-  it('mounts against the configured data package', async () => {
-    const { app, host } = await mountSite(config, messages)
+  it('mounts the home page: the themes in legacy order, two highlighted, the countries', async () => {
+    const { app, host } = await mountOn('#/', '.explore-themes__card')
 
     expect(host.querySelector('.mwnf-page')).not.toBeNull()
+    expect(texts(host, '.explore-themes__name')).toEqual([
+      "Explore Palestine's Islamic Art and Architecture",
+      'Explore the Islamic Heritage of the Mediterranean',
+      'Explore Portugal',
+      'Explore Baroque',
+      'Explore Tyrol',
+      'Explore Ariccia',
+    ])
+    expect(host.querySelectorAll('.explore-highlighted__card')).toHaveLength(2)
+    expect(host.querySelectorAll('#explore-by-country .explore-tiles__tile')).toHaveLength(23)
+    // The home banner, one of legacy's, from its media server.
+    expect(host.querySelector('.mwnf-banner__image').getAttribute('src')).toMatch(
+      /^https:\/\/images\.museumwnf\.org\/hi_res\/explore\/banners\//,
+    )
+    // The two partnerships legacy shows on its home page.
+    expect(texts(host, '.explore-partnerships__title')).toEqual(['Barakat', 'European Union'])
 
-    // The composed landing page (named in `config.views.home`) replaces
-    // viewer-core's generic home view: the title, the cards and the record
-    // on display come from `config.home`, not from a page written here.
-    expect(host.querySelector('.vc-home')).toBeNull()
-    expect(host.querySelector('.mwnf-home__title').textContent.trim()).not.toBe('')
-    expect(host.querySelector('.mwnf-cards__card')).not.toBeNull()
-
-    // The one thing this template's own test checks that the shared kit
-    // cannot: the placeholder site name renders in the header lockup, the
-    // #brand slot SiteShell.vue fills.
-    expect(host.textContent).toContain('explore')
-
-    app.unmount()
-  }, 20000)
-
-  // The other pages a scaffolded website starts with, rendered against the
-  // data package by the composed views, each on an application mounted on
-  // that page's address — as a visitor arrives from a link. The search form
-  // draws the keyword rows the search spec declares; the results page lists
-  // records under the filter panel the catalogue spec declares; the record
-  // page shows a record's sheet under the labels the sheet spec declares; the
-  // About page renders the one body entry the about spec names.
-  it('renders the composed search form from the search spec', async () => {
-    const { app, host } = await mountSite(config, messages, '#/search')
-    await vi.waitFor(() => expect(host.querySelector('.mwnf-search-form__row')).not.toBeNull(), { timeout: 20000 })
-    expect(host.querySelectorAll('.mwnf-search-form__row').length).toBeGreaterThan(1)
     app.unmount()
   }, 60000)
 
-  it('renders the composed results page from the catalogue spec', async () => {
-    const { app, host } = await mountSite(config, messages, '#/catalogue')
-    await vi.waitFor(() => expect(host.querySelector('.mwnf-list__row')).not.toBeNull(), { timeout: 20000 })
-    expect(host.querySelector('.mwnf-filter')).not.toBeNull()
-    expect(host.querySelector('.mwnf-summary__count')).not.toBeNull()
+  it("renders a theme: its introduction, its countries and the travel records scoped to it", async () => {
+    const theme = await collection('mwnf3_explore:thematiccycle:1')
+    const { app, host } = await mountOn(`#/theme/${theme.id}`, '.explore-tiles__tile')
+
+    expect(host.querySelector('.explore-page__title').textContent.trim()).toBe(
+      'Explore the Islamic Heritage of the Mediterranean',
+    )
+    expect(host.querySelector('.explore-page__text').textContent).toContain('Did you know that Islam')
+    expect(host.querySelectorAll('.explore-tiles__tile')).toHaveLength(11)
+    expect(host.querySelectorAll('.explore-travel--books .explore-travel__record')).toHaveLength(11)
+    expect(host.querySelectorAll('.explore-travel--tours .explore-travel__record')).toHaveLength(14)
+    expect(texts(host, '.explore-partnerships__title')).toEqual(['Barakat', 'European Union'])
+    // Legacy's "Read in": the languages the theme is written in.
+    await vi.waitFor(() => expect(host.querySelectorAll('.mwnf-languages__button')).toHaveLength(3), { timeout: 30000 })
+
     app.unmount()
   }, 60000)
 
-  it('renders the composed record page from the sheet spec', async () => {
+  it('renders a country by theme, and the same country by country', async () => {
+    const theme = await collection('mwnf3_explore:thematiccycle:1')
+    const spain = await collection('mwnf3_explore:country:es')
+
+    const byTheme = await mountOn(`#/country/${spain.id}?theme=${theme.id}`, '.explore-tiles__tile')
+    expect(byTheme.host.querySelector('.explore-page__subtitle').textContent.split(', ')).toHaveLength(6)
+    expect(byTheme.host.querySelector('.explore-page__text').textContent).toContain('medieval Spain')
+    expect(byTheme.host.querySelectorAll('.explore-tiles__tile')).toHaveLength(64)
+    expect(byTheme.host.querySelectorAll('.explore-travel--books .explore-travel__record')).toHaveLength(1)
+    expect(byTheme.host.querySelectorAll('.explore-travel--tours .explore-travel__record')).toHaveLength(3)
+    byTheme.app.unmount()
+
+    const byCountry = await mountOn(`#/country/${spain.id}`, '.explore-tiles__tile')
+    expect(byCountry.host.querySelectorAll('.explore-tiles__tile')).toHaveLength(66)
+    // No partnership is scoped to Spain.
+    expect(byCountry.host.querySelector('.explore-partnerships')).toBeNull()
+    byCountry.app.unmount()
+  }, 90000)
+
+  it("renders a location: its monuments by Explore's names, and its historical background", async () => {
+    const theme = await collection('mwnf3_explore:thematiccycle:1')
+    const toledo = await collection('mwnf3_explore:location:337')
+    const { app, host } = await mountOn(`#/location/${toledo.id}?theme=${theme.id}`, '.explore-tiles__tile')
+
+    const monuments = texts(host, '.explore-tiles__label')
+    expect(monuments).toHaveLength(12)
+    expect(monuments).toContain('Mosque of Cristo de la Luz')
+    app.unmount()
+
+    const [collections] = await loadEntities(['collections'])
+    const withBackground = collections.find((c) => c.extra?.historical_background?.length)
+    const background = await mountOn(`#/location/${withBackground.id}`, '.explore-background__text')
+    expect(background.host.querySelector('.explore-background__heading').textContent).toContain('Historical Background')
+    expect(background.host.querySelector('.explore-background__text').textContent.trim().length).toBeGreaterThan(100)
+    background.app.unmount()
+  }, 90000)
+
+  it("renders a monument: its own record's description, and the records it also stands for as related content", async () => {
     const [items] = await loadEntities(['items'])
-    const { app, host } = await mountSite(config, messages, `#/item/${encodeURIComponent(items[0].id)}`)
-    await vi.waitFor(() => expect(host.querySelector('.mwnf-sheet__label')).not.toBeNull(), { timeout: 20000 })
-    expect(host.querySelector('.mwnf-record__title').textContent.trim()).not.toBe('')
+    const toledo = await collection('mwnf3_explore:location:337')
+    // Monument 557 is a Travels "Exhibition Trails" record and a Virtual
+    // Museum one: legacy shows the first, and the second as related content.
+    const trails = items.find((i) => i.backward_compatibility === 'mwnf3_travels:monument:IAM:es:1:IX:1:b')
+    const { app, host } = await mountOn(`#/monument/${trails.id}?location=${toledo.id}`, '.explore-monument__name')
+
+    expect(host.querySelector('.explore-page__title').textContent.replace(/\s+/g, ' ').trim()).toBe(
+      'Mosque of Cristo de la Luz (Toledo, Spain)',
+    )
+    expect(host.querySelector('.explore-monument__source').textContent).toBe('Exhibition Trails')
+    expect(host.querySelector('.explore-tabs__panel').textContent).toContain('This mosque, in fact, is two buildings')
+    expect(host.textContent).toContain('María Teresa Pérez Higuera')
+
+    const tabs = texts(host, '.explore-tabs__tab')
+    expect(tabs).toEqual(['Description', 'Get Directions', 'Additional Information', 'Related Content'])
+    host.querySelectorAll('.explore-tabs__tab')[3].click()
+    await vi.waitFor(() => expect(host.querySelector('.explore-related')).not.toBeNull())
+    expect(host.querySelector('.explore-related .explore-monument__source').textContent).toBe(
+      'Virtual Museum — Discover Islamic Art',
+    )
+
     app.unmount()
   }, 60000)
 
-  it('renders the About page on TextPageView from the about spec', async () => {
-    const { app, host } = await mountSite(config, messages, '#/about')
-    expect(host.querySelector('.mwnf-prose').textContent.trim()).not.toBe('')
-    app.unmount()
-  }, 20000)
+  it("redirects legacy's addresses to their pages", async () => {
+    const [items] = await loadEntities(['items'])
+    const toledo = await collection('mwnf3_explore:location:337')
+    const theme = await collection('mwnf3_explore:thematiccycle:1')
+    const trails = items.find((i) => i.backward_compatibility === 'mwnf3_travels:monument:IAM:es:1:IX:1:b')
+
+    const monument = await mountSite(config, messages, '#/themes/t-1/c-es/l-337/m-557/lan-en')
+    await vi.waitFor(() => expect(monument.router.currentRoute.value.name).toBe('monument'), { timeout: 30000 })
+    expect(monument.router.currentRoute.value.params.id).toBe(trails.id)
+    expect(monument.router.currentRoute.value.query).toMatchObject({ location: toledo.id, theme: theme.id })
+    monument.app.unmount()
+
+    const country = await mountSite(config, messages, '#/countries/c-es')
+    await vi.waitFor(() => expect(country.router.currentRoute.value.name).toBe('country'), { timeout: 30000 })
+    country.app.unmount()
+  }, 60000)
+
+  for (const page of ['about', 'credits', 'get-involved', 'important-information', 'new']) {
+    it(`renders the ${page} page on TextPageView`, async () => {
+      const { app, host } = await mountOn(`#/${page}`, '.mwnf-prose')
+      expect(host.querySelector('.mwnf-prose').textContent.trim()).not.toBe('')
+      app.unmount()
+    }, 30000)
+  }
 
   it('declares every route by name, and leaves the catch-all to the router', () => {
     // A named route is what a view links to; a path written into a link is a
     // second declaration of the same address, and the two drift.
-    expect(checkRoutes(config, { names: ['search', 'catalogue', 'item', 'about'] })).toEqual([])
-    // The three slots are the composed views, not viewer-core's generic ones.
-    expect(Object.keys(config.views ?? {}).sort()).toEqual(['detail', 'home', 'list'])
+    expect(
+      checkRoutes(config, {
+        names: [
+          'home', 'theme', 'country', 'territory', 'location', 'monument',
+          'about', 'credits', 'get-involved', 'important-information', 'new',
+        ],
+        legacyPaths: ['/themes/:path(.*)', '/countries/:path(.*)'],
+      }),
+    ).toEqual([])
   })
 
   it('declares the entities every route reads', () => {
-    // A view rendering records against `null` is the failure this prevents:
-    // the router loads what a route names before the view is created.
     for (const route of config.extraViews) {
       expect(Array.isArray(route.meta?.entities), route.name).toBe(true)
     }
   })
 
   it('declares the section every route belongs to', () => {
-    // The shell reads `meta.section` (viewer-core's `useSection()`) to
-    // highlight the current section in the menu; a route without one would
-    // leave the menu silently unmarked rather than fail.
     expect(checkSectionMeta(config)).toEqual([])
   })
 
   it('publishes no generic entity pages', () => {
-    // Leaving `entities` at the package default publishes one list and one
-    // detail page per exported entity — routes this website never had, showing
-    // the data package's shape rather than the site's.
     expect(config.features.entities).toEqual([])
   })
 
-  // The one language rule, checked the same way in all seven websites: every
+  // The one language rule, checked the same way in every website: every
   // offered language is one the package declares for this site AND one the
-  // items actually carry. Offering a language whose item sheets all render
-  // English is the failure this catches, and a visitor cannot tell it from a
-  // site that is simply untranslated.
+  // items actually carry.
   it('offers the languages the package declares, where the items carry them', () => {
     expect(checkOfferedLanguages(config)).toEqual([])
     expect(config.languages.length).toBeGreaterThan(0)
@@ -114,17 +201,15 @@ describe('website smoke test', () => {
 
   // The chrome is two layers, and either one failing is silent: a missing
   // entry renders as its own name rather than as an error. This asserts the
-  // rendered page, not the files, so a bundle that installs but never reaches
-  // the components fails here too.
+  // rendered page, not the files.
   it('renders the shared texts and its own over them', async () => {
-    const { app, host } = await mountSite(config, messages)
-
-    // From viewer-i18n: the layout's skip link.
-    expect(host.textContent).toContain('Skip to content')
-    // Nothing rendered as a bare entry name, which is what a missing text
-    // looks like — there is no exception to throw for one.
-    expect(checkTextsRendered(host, { namespaces: ['explore', 'core', 'layout'] })).toEqual([])
-
-    app.unmount()
-  }, 20000)
+    const theme = await collection('mwnf3_explore:thematiccycle:1')
+    for (const hash of ['#/', `#/theme/${theme.id}`]) {
+      const { app, host } = await mountOn(hash, '.explore-tiles__tile')
+      // From viewer-i18n: the layout's skip link.
+      expect(host.textContent).toContain('Skip to content')
+      expect(checkTextsRendered(host, { namespaces: ['explore', 'core', 'layout', 'record', 'sheet'] })).toEqual([])
+      app.unmount()
+    }
+  }, 60000)
 })
