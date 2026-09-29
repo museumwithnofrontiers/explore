@@ -32,7 +32,7 @@ const tours = computed(() => props.tours.map((tour) => entry(tour, 'tour')))
 
 <template>
   <section v-if="books.length" class="explore-travel explore-travel--books">
-    <h2 class="explore-travel__heading">{{ books.length === 1 ? t('explore.travel.book') : t('explore.travel.books') }}</h2>
+    <h2 class="explore-travel__heading">{{ t('explore.travel.books') }}</h2>
     <article v-for="book in books" :key="book.id" class="explore-travel__record">
       <div class="explore-travel__body">
         <h3 class="explore-travel__title">
@@ -45,7 +45,7 @@ const tours = computed(() => props.tours.map((tour) => entry(tour, 'tour')))
   </section>
 
   <section v-if="tours.length" class="explore-travel explore-travel--tours">
-    <h2 class="explore-travel__heading">{{ tours.length === 1 ? t('explore.travel.tour') : t('explore.travel.tours') }}</h2>
+    <h2 class="explore-travel__heading">{{ t('explore.travel.tours') }}</h2>
     <article v-for="tour in tours" :key="tour.id" class="explore-travel__record">
       <img v-if="tour.image" class="explore-travel__image" :src="tour.image" alt="" loading="lazy" />
       <div class="explore-travel__body">
