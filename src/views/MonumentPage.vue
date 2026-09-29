@@ -57,11 +57,11 @@ const place = computed(() =>
 
 // ── Where each record comes from ──────────────────────────────────────────
 
+// Legacy's dictionary names two of the sources; a Sharing History record is
+// named by its project alone, and Explore's own by nothing.
 const sourceLabels = computed(() => ({
   trails: t('explore.source.trails'),
   virtualMuseum: t('explore.source.virtualMuseum'),
-  sharingHistory: t('explore.source.sharingHistory'),
-  explore: t('explore.source.explore'),
 }))
 function sourceLine(record, lang) {
   const project = manifest.projects?.[record.project_id]?.name

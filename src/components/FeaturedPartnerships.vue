@@ -10,7 +10,7 @@ const props = defineProps({
   partnerships: { type: Array, default: () => [] },
   variant: { type: String, default: 'column' },
 })
-const { t, locale } = useI18n()
+const { locale } = useI18n()
 
 const entries = computed(() =>
   props.partnerships.map((partnership) => {
@@ -27,7 +27,7 @@ const entries = computed(() =>
 </script>
 
 <template>
-  <section v-if="entries.length" class="explore-partnerships" :class="`explore-partnerships--${variant}`" :aria-label="t('explore.home.partnerships')">
+  <section v-if="entries.length" class="explore-partnerships" :class="`explore-partnerships--${variant}`">
     <component
       :is="entry.url ? 'a' : 'div'"
       v-for="entry in entries"

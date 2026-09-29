@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { mdInline, useI18n } from '@museumwnf/viewer-core'
+import { useI18n } from '@museumwnf/viewer-core'
 import { FacetSelect } from '@museumwnf/viewer-layout/content'
 import {
   byTitle, countries, filtersOf, monumentLink, monumentName, placeLink, shownLocations, shownMonuments,
@@ -76,8 +76,9 @@ const pickMonument = (value) => {
   go(hit && monumentLink(hit.monument, { theme: props.theme }))
 }
 
-const note = computed(() =>
-  mdInline(props.mode === 'theme' ? t('explore.select.byThemeNote') : t('explore.select.byCountryNote')),
+// Legacy's sentence under the selection, one form per path, then its link home.
+const exploring = computed(() =>
+  props.mode === 'theme' ? t('explore.select.exploringTheme') : t('explore.select.exploringCountry'),
 )
 </script>
 
@@ -98,6 +99,8 @@ const note = computed(() =>
       <FacetSelect :label="`4. ${t('explore.select.locations')}`" :placeholder="t('explore.select.pickLocation')" :options="locationOptions" :model-value="location?.id ?? ''" :disabled="!locationOptions.length" @update:model-value="pickLocation" />
       <FacetSelect :label="`5. ${t('explore.select.monuments')}`" :placeholder="t('explore.select.pickMonument')" :options="monuments" :model-value="monumentValue" :disabled="!monuments.length" @update:model-value="pickMonument" />
     </template>
-    <p class="explore-select__note" v-html="note"></p>
+    <p class="explore-select__note">
+      {{ exploring }} <RouterLink :to="{ name: 'home' }">{{ t('explore.select.returnHome') }}</RouterLink>
+    </p>
   </section>
 </template>

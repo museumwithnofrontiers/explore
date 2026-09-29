@@ -1,5 +1,4 @@
 <script setup>
-import { useI18n } from '@museumwnf/viewer-core'
 import FeaturedPartnerships from './FeaturedPartnerships.vue'
 import SelectionPanel from './SelectionPanel.vue'
 
@@ -13,7 +12,6 @@ defineProps({
   selection: { type: Object, required: true },
   partnerships: { type: Array, default: () => [] },
 })
-const { t } = useI18n()
 </script>
 
 <template>
@@ -23,7 +21,7 @@ const { t } = useI18n()
       <FeaturedPartnerships :partnerships="partnerships" />
     </aside>
     <div class="explore-frame__main">
-      <nav v-if="crumbs.length" class="explore-crumbs" :aria-label="t('explore.nav.breadcrumb')">
+      <nav v-if="crumbs.length" class="explore-crumbs">
         <template v-for="(crumb, index) in crumbs" :key="index">
           <span v-if="index > 0" class="explore-crumbs__separator" aria-hidden="true"></span>
           <RouterLink v-if="crumb.to && index < crumbs.length - 1" class="explore-crumbs__link" :to="crumb.to">{{ crumb.label }}</RouterLink>

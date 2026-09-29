@@ -118,7 +118,7 @@ describe('website smoke test', () => {
     const [collections] = await loadEntities(['collections'])
     const withBackground = collections.find((c) => c.extra?.historical_background?.length)
     const background = await mountOn(`#/location/${withBackground.id}`, '.explore-background__text')
-    expect(background.host.querySelector('.explore-background__heading').textContent).toContain('Historical Background')
+    expect(background.host.querySelector('.explore-background__heading').textContent).toContain('Historical background')
     expect(background.host.querySelector('.explore-background__text').textContent.trim().length).toBeGreaterThan(100)
     background.app.unmount()
   }, 90000)
@@ -139,7 +139,8 @@ describe('website smoke test', () => {
     expect(host.textContent).toContain('María Teresa Pérez Higuera')
 
     const tabs = texts(host, '.explore-tabs__tab')
-    expect(tabs).toEqual(['Description', 'Get Directions', 'Additional Information', 'Related Content'])
+    // Legacy's client's words, in its capitals, between the shared ones.
+    expect(tabs).toEqual(['Description', 'GET DIRECTIONS', 'ADDITIONAL INFORMATION', 'Related Content'])
     host.querySelectorAll('.explore-tabs__tab')[3].click()
     await vi.waitFor(() => expect(host.querySelector('.explore-related')).not.toBeNull())
     expect(host.querySelector('.explore-related .explore-monument__source').textContent).toBe(

@@ -37,7 +37,8 @@ const meta = sectionMeta(['collections', 'languages'])
 const back = { label: 'core.action.back', to: { name: 'home' } }
 const textPage = (body) => ({ spec: { body, back } })
 
-const siteName = manifest.site?.names?.en ?? 'Explore'
+// The Explore root's title: legacy's dictionary word `explore_mwnf`.
+const siteName = manifest.site?.names?.en ?? ''
 
 export default {
   // The dataset package this website renders. Must match the alias in
@@ -72,7 +73,7 @@ export default {
       { label: 'explore.nav.getInvolved', to: { name: 'get-involved' } },
     ],
     footerLinks: [
-      { label: 'explore.nav.mwnfHome', href: mwnfLinks.portal, external: true },
+      { label: 'explore.nav.mwnfPortal', href: mwnfLinks.portal, external: true },
       { label: 'core.footer.aboutMwnf', href: mwnfLinks.about, external: true },
       { label: 'core.footer.contact', href: mwnfLinks.contact, external: true },
       { label: 'explore.nav.importantInformation', to: { name: 'important-information' } },
