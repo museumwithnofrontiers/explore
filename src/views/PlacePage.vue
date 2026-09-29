@@ -5,12 +5,15 @@ import { NotFoundView, languageLabels, md, useI18n, useRecordLanguage } from '@m
 import { RecordLanguages } from '@museumwnf/viewer-layout/content'
 import AdditionalInformation from '../components/AdditionalInformation.vue'
 import ExploreFrame from '../components/ExploreFrame.vue'
+import ExploreMap from '../components/ExploreMap.vue'
 import ExploreTiles from '../components/ExploreTiles.vue'
+import LocationBackground from '../components/LocationBackground.vue'
+import SuggestedRoutes from '../components/SuggestedRoutes.vue'
 import TravelRecords from '../components/TravelRecords.vue'
 import {
   byTitle, collectionById, countryOf, legacyId, levelOf, monumentLink, monumentName, partnershipsFor, placeLink,
-  shownLocations, shownMonuments, shownTerritories, territoryOf, text, themeCountryText, themeLink, title, travelFor,
-  tree, useCollectionLanguages, useTexts,
+  placePosition, positionOf, shownLocations, shownMonuments, shownTerritories, territoryOf, text, themeCountryText,
+  themeLink, title, travelFor, useCollectionLanguages, useTexts,
 } from '../composables/explore.js'
 
 // A country's, a territory's or a location's page. Reached by theme
@@ -59,28 +62,6 @@ const themeText = computed(() =>
 )
 const description = computed(() => (level.value === 'location' ? '' : md(own.value.description)))
 
-// Explore's own text, signed by its `prepared_by`, then each Travels
-// location's introduction, signed by its author.
-const background = computed(() => {
-  if (level.value !== 'location') return []
-  const texts = []
-  if (own.value.description) {
-    texts.push({ key: 'own', html: md(own.value.description), by: own.value.extra?.prepared_by ?? '' })
-  }
-  for (const key of place.value.extra?.historical_background ?? []) {
-    const travels = tree.value.byKey.get(key)
-    const travelsText = travels ? text('collections', travels.id, language.value) : {}
-    if (travelsText.description) {
-      texts.push({
-        key,
-        html: md(travelsText.description),
-        by: travelsText.extra?.author || travelsText.extra?.prepared_by || '',
-      })
-    }
-  }
-  return texts
-})
-
 const ownInformation = computed(() =>
   [
     { key: 'howToReach', label: t('explore.info.howToReach'), value: own.value.extra?.how_to_reach },
@@ -112,6 +93,21 @@ const monumentTiles = computed(() =>
         }))
         .sort((a, b) => a.label.localeCompare(b.label, locale.value)),
 )
+
+// Legacy's map: the places or the monuments the page leads to, no closer
+// than the page's own zoom.
+const pins = computed(() =>
+  level.value === 'location'
+    ? shownMonuments(place.value, context.value).flatMap((m) => {
+        const at = positionOf(m)
+        return at ? [{ ...at, label: monumentName(m, locale.value), to: monumentLink(m, { theme: theme.value }) }] : []
+      })
+    : shownLocations(place.value, context.value).flatMap((l) => {
+        const at = placePosition(l)
+        return at ? [{ ...at, label: title(l, locale.value), to: placeLink(l, context.value) }] : []
+      }),
+)
+const mapZoom = computed(() => placePosition(place.value)?.zoom ?? null)
 
 const travel = computed(() => travelFor(level.value, legacyId(place.value)))
 const crumbs = computed(() => {
@@ -146,15 +142,11 @@ const partnerships = computed(() =>
       <div v-if="themeText" class="explore-page__text explore-prose" :dir="dir || undefined" v-html="themeText"></div>
       <div v-if="description" class="explore-page__text explore-prose" :dir="dir || undefined" v-html="description"></div>
 
-      <section v-if="background.length" class="explore-background">
-        <h2 class="explore-background__heading">{{ name }} | {{ t('explore.location.background') }}</h2>
-        <div v-for="entry in background" :key="entry.key" class="explore-background__text">
-          <div class="explore-prose" :dir="dir || undefined" v-html="entry.html"></div>
-          <p v-if="entry.by" class="explore-page__credit">{{ t('sheet.field.preparedBy') }}: {{ entry.by }}</p>
-        </div>
-      </section>
+      <LocationBackground :location="location" :language="language" :dir="dir" />
 
       <AdditionalInformation :texts="ownInformation" :travel="travel" />
+      <ExploreMap v-if="pins.length" :pins="pins" :zoom="mapZoom" />
+      <SuggestedRoutes :location="location" />
       <ExploreTiles :heading="t('explore.next.location')" :tiles="locationTiles" />
       <ExploreTiles :heading="t('explore.next.monument')" :tiles="monumentTiles" />
       <TravelRecords :books="travel.books" :tours="travel.tours" />

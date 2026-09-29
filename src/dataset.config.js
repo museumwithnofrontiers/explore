@@ -4,8 +4,11 @@ import {
 import { TextPageView } from '@museumwnf/viewer-layout/views'
 import SiteShell from './SiteShell.vue'
 import ExploreHome from './views/ExploreHome.vue'
+import ItinerariesPage from './views/ItinerariesPage.vue'
+import ItineraryPage from './views/ItineraryPage.vue'
 import MonumentPage from './views/MonumentPage.vue'
 import PlacePage from './views/PlacePage.vue'
+import SubItineraryPage from './views/SubItineraryPage.vue'
 import ThemePage from './views/ThemePage.vue'
 import { banner, exploreCollection, resolveLegacyPath, title } from './composables/explore.js'
 
@@ -65,6 +68,11 @@ export default {
       { section: 'home', label: 'core.nav.home', to: { name: 'home' } },
       { section: 'themes', label: 'explore.nav.byTheme', to: { name: 'home', hash: '#explore-by-theme' } },
       { section: 'countries', label: 'explore.nav.byCountry', to: { name: 'home', hash: '#explore-by-country' } },
+      {
+        section: 'itineraries',
+        label: 'explore.nav.byItinerary',
+        to: { name: 'home', hash: '#explore-by-itinerary' },
+      },
     ],
     headerLinks: [
       { label: 'explore.nav.whatsNew', to: { name: 'new' } },
@@ -155,6 +163,37 @@ export default {
       props: true,
       meta: meta('explore', 'items'),
     },
+    // The itineraries: a country's list, a thematic itinerary, a
+    // sub-itinerary; and a location's routes, drawn as sub-itineraries are.
+    {
+      // Not `/itineraries/…`: that is legacy's address space, resolved below.
+      path: '/country/:id/itineraries',
+      name: 'itineraries',
+      component: ItinerariesPage,
+      props: true,
+      meta: meta('itineraries'),
+    },
+    {
+      path: '/itinerary/:id',
+      name: 'itinerary',
+      component: ItineraryPage,
+      props: true,
+      meta: meta('itineraries', 'items'),
+    },
+    {
+      path: '/sub-itinerary/:id',
+      name: 'sub-itinerary',
+      component: SubItineraryPage,
+      props: (route) => ({ id: route.params.id, kind: 'sub-itinerary' }),
+      meta: meta('itineraries', 'items'),
+    },
+    {
+      path: '/route/:id',
+      name: 'route',
+      component: SubItineraryPage,
+      props: (route) => ({ id: route.params.id, kind: 'route' }),
+      meta: meta('explore', 'items'),
+    },
     { path: '/about', name: 'about', component: TextPageView, props: textPage('explore.about.body'), meta: meta('about') },
     { path: '/credits', name: 'credits', component: TextPageView, props: textPage('explore.credits.body'), meta: meta('credits') },
     {
@@ -175,9 +214,11 @@ export default {
   ],
 
   // Legacy's addresses — `/themes/t-1/c-es/l-337/m-557/lan-en`,
-  // `/countries/c-es/l-337` — each resolving onto the page it names.
+  // `/countries/c-es/l-337`, `/itineraries/c-pt/i-97/si-100` — each resolving
+  // onto the page it names.
   legacyRoutes: [
     { path: '/themes/:path(.*)', resolve: (params) => resolveLegacyPath(params.path) },
     { path: '/countries/:path(.*)', resolve: (params) => resolveLegacyPath(params.path) },
+    { path: '/itineraries/:path(.*)', resolve: (params) => resolveLegacyPath(params.path, 'itineraries') },
   ],
 }

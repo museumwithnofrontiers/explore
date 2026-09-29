@@ -139,13 +139,18 @@ describe('website smoke test', () => {
     expect(host.textContent).toContain('María Teresa Pérez Higuera')
 
     const tabs = texts(host, '.explore-tabs__tab')
-    // Legacy's client's words, in its capitals, between the shared ones.
-    expect(tabs).toEqual(['Description', 'GET DIRECTIONS', 'ADDITIONAL INFORMATION', 'Related Content'])
-    host.querySelectorAll('.explore-tabs__tab')[3].click()
+    // Legacy's words: the dictionary's, the client's (in its capitals) and the shared ones.
+    expect(tabs).toEqual([
+      'Description', 'Map', 'GET DIRECTIONS', 'ADDITIONAL INFORMATION', 'Related Content', 'RELATED ITINERARIES',
+    ])
+    host.querySelectorAll('.explore-tabs__tab')[4].click()
     await vi.waitFor(() => expect(host.querySelector('.explore-related')).not.toBeNull())
     expect(host.querySelector('.explore-related .explore-monument__source').textContent).toBe(
       'Virtual Museum — Discover Islamic Art',
     )
+    // Its map: one marker, at legacy's position of the monument.
+    host.querySelectorAll('.explore-tabs__tab')[1].click()
+    await vi.waitFor(() => expect(host.querySelectorAll('.explore-map path.leaflet-interactive')).toHaveLength(1))
 
     app.unmount()
   }, 60000)
@@ -178,6 +183,75 @@ describe('website smoke test', () => {
     const country = await mountSite(config, messages, '#/countries/c-es')
     await vi.waitFor(() => expect(country.router.currentRoute.value.name).toBe('country'), { timeout: 30000 })
     country.app.unmount()
+
+    const sub = await collection('mwnf3_explore:itinerary:100')
+    const itinerary = await mountSite(config, messages, '#/itineraries/c-pt/i-97/si-100')
+    await vi.waitFor(() => expect(itinerary.router.currentRoute.value.name).toBe('sub-itinerary'), { timeout: 30000 })
+    expect(itinerary.router.currentRoute.value.params.id).toBe(sub.id)
+    itinerary.app.unmount()
+  }, 60000)
+
+  // The itineraries, against legacy's API (`/itineraries/…`): its 12 thematic
+  // itineraries in 11 countries, their sub-itineraries in order, and each
+  // sub-itinerary's locations and monuments in order.
+  it('offers the itineraries on the home page: 11 countries, 12 itineraries, 4 drawn', async () => {
+    const { app, host } = await mountOn('#/', '.explore-itinerary-cards__card')
+    const [countries, itineraries] = host.querySelectorAll('#explore-by-itinerary select')
+    // Each select opens on its placeholder.
+    expect(countries.options).toHaveLength(12)
+    expect(itineraries.options).toHaveLength(13)
+    expect(host.querySelectorAll('.explore-itinerary-cards__card')).toHaveLength(4)
+    app.unmount()
+  }, 60000)
+
+  it("lists a country's itineraries, and an itinerary's sub-itineraries", async () => {
+    const portugal = await collection('mwnf3_explore:country:pt')
+    const list = await mountOn(`#/country/${portugal.id}/itineraries`, '.explore-itinerary__name')
+    expect(texts(list.host, '.explore-itinerary__name')).toEqual([
+      'The Manueline. Portuguese Art during the Great Discoveries',
+      'In the Lands of the Enchanted Moorish Maiden. Islamic Art in Portugal',
+    ])
+    list.app.unmount()
+
+    const manueline = await collection('mwnf3_explore:itinerary:97')
+    const page = await mountOn(`#/itinerary/${manueline.id}`, '.explore-subs__heading')
+    expect(page.host.querySelector('.explore-subs__heading').textContent.trim()).toBe('14 Sub-Itineraries')
+    expect(texts(page.host, '.explore-itinerary__name').slice(0, 2)).toEqual([
+      'The Beach of Adventure [Two days]',
+      'Lands of the Order of Christ [Two days]',
+    ])
+    page.app.unmount()
+  }, 60000)
+
+  it("renders a sub-itinerary: its locations in legacy's order, each one's monuments", async () => {
+    const sub = await collection('mwnf3_explore:itinerary:100')
+    const { app, host } = await mountOn(`#/sub-itinerary/${sub.id}`, '.explore-tiles__label')
+    expect(texts(host, '.explore-sub__tab')).toEqual(['Santarém', 'Golegã', 'Torres Novas', 'Atalaia', 'Tomar', 'Dornes'])
+    expect(texts(host, '.explore-tiles__label')).toEqual([
+      'Church of Santa Maria de Marvila',
+      'Municipal Museum',
+      'Torre das Cabaças',
+      'Church of Nossa Senhora da Graça',
+    ])
+    expect(host.querySelectorAll('.explore-map path.leaflet-interactive').length).toBeGreaterThan(0)
+    app.unmount()
+  }, 60000)
+
+  it("renders a location's suggested routes, and a route", async () => {
+    const ariccia = await collection('mwnf3_explore:location:409')
+    const location = await mountOn(`#/location/${ariccia.id}`, '.explore-routes__select')
+    const groups = [...location.host.querySelectorAll('.explore-routes__select optgroup')].map((g) => [
+      g.label,
+      g.querySelectorAll('option').length,
+    ])
+    expect(groups).toEqual([['EXPLORE', 1], ['ALSO NOT TO BE MISSED', 3], ['TO KNOW MORE', 1]])
+    location.app.unmount()
+
+    const route = await collection('mwnf3_explore:itinerary:113')
+    const page = await mountOn(`#/route/${route.id}`, '.explore-tiles__label')
+    expect(page.host.querySelector('.explore-page__title').textContent.trim()).toBe('Ariccia | Piazza di Corte')
+    expect(page.host.querySelectorAll('.explore-tiles__label')).toHaveLength(9)
+    page.app.unmount()
   }, 60000)
 
   for (const page of ['about', 'credits', 'get-involved', 'important-information', 'new']) {
@@ -195,9 +269,10 @@ describe('website smoke test', () => {
       checkRoutes(config, {
         names: [
           'home', 'theme', 'country', 'territory', 'location', 'monument',
+          'itineraries', 'itinerary', 'sub-itinerary', 'route',
           'about', 'credits', 'get-involved', 'important-information', 'new',
         ],
-        legacyPaths: ['/themes/:path(.*)', '/countries/:path(.*)'],
+        legacyPaths: ['/themes/:path(.*)', '/countries/:path(.*)', '/itineraries/:path(.*)'],
       }),
     ).toEqual([])
   })

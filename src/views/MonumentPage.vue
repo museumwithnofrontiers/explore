@@ -8,20 +8,23 @@ import {
 import { GlossaryPopover, MediaGallery, RecordLanguages, SpecialFeatures } from '@museumwnf/viewer-layout/content'
 import AdditionalInformation from '../components/AdditionalInformation.vue'
 import ExploreFrame from '../components/ExploreFrame.vue'
+import ExploreMap from '../components/ExploreMap.vue'
 import {
-  collectionById, countryOf, detailsOf, findMonument, loadTexts, monumentName, partnershipsFor, placeLink, sourceOf,
-  territoryOf, text, themeLink, title, travelFor, useTexts,
+  collectionById, countryOf, detailsOf, excerpt, findMonument, isSubItinerary, itinerariesLink, itinerariesOf,
+  itineraryCountries, itineraryLink, loadTexts, monumentName, partnershipsFor, placeLink, placePosition, positionOf,
+  routeKind, routeLink, sourceOf, subItineraryLink, territoryOf, text, themeLink, title, travelFor, useTexts,
 } from '../composables/explore.js'
 
 // A monument's page, legacy's tabs: its description (its own record's, in
-// any language the record carries), how to get there, the travel layer's
-// practical information, and its related content — the other records the
-// Explore monument stands for, and its record's special features. The map
-// and the itineraries it is on come with the itinerary pages.
+// any language the record carries), its map, how to get there, the travel
+// layer's practical information, its related content — the other records
+// the Explore monument stands for, and its record's special features — and
+// the sub-itineraries it is on.
 //
 // The address names the monument by its own record (`/monument/:id`) and the
 // location it is explored from (`?location=`): one record can be a monument
-// in several locations.
+// in several locations. A monument reached through a sub-itinerary keeps it
+// (`?itinerary=`), in its trail and its selection.
 const props = defineProps({
   id: { type: String, required: true },
 })
@@ -39,6 +42,15 @@ const country = computed(() => countryOf(location.value))
 const theme = computed(() => {
   const collection = collectionById(route.query.theme)
   return collection?.type === 'theme' ? collection : null
+})
+const sub = computed(() => {
+  const collection = collectionById(route.query.itinerary)
+  return collection && isSubItinerary(collection) ? collection : null
+})
+// A monument reached from a route links back to it, as legacy's did.
+const fromRoute = computed(() => {
+  const collection = collectionById(route.query.route)
+  return collection && routeKind(collection) ? collection : null
 })
 
 const { language, languages, dir, select, glossary, terms } = useRecordSheet(main, { entity: 'items' })
@@ -144,11 +156,32 @@ const related = computed(() =>
 const features = computed(() => detailsOf(main.value))
 const featureText = (feature) => text('items', feature.id, language.value)
 
+// ── The map and the itineraries ───────────────────────────────────────────
+
+const position = computed(() => positionOf(monument.value))
+const pin = computed(() => (position.value ? [{ ...position.value, label: heading.value }] : []))
+
+// Legacy cut a sub-itinerary's text in this list at this many characters.
+const DESCRIPTION_LENGTH = 400
+const onItineraries = computed(() =>
+  itinerariesOf(monument.value).map((entry) => {
+    const texts = text('collections', entry.id, locale.value)
+    return {
+      id: entry.id,
+      name: title(entry, locale.value),
+      duration: texts.extra?.duration ?? '',
+      description: excerpt(texts.description, DESCRIPTION_LENGTH),
+      to: subItineraryLink(entry, location.value),
+    }
+  }),
+)
+
 // ── The tabs ──────────────────────────────────────────────────────────────
 
 const tabs = computed(() =>
   [
     { key: 'description', label: t('sheet.field.description'), shown: true },
+    { key: 'map', label: t('explore.monument.map'), shown: pin.value.length > 0 },
     { key: 'directions', label: t('explore.monument.directions'), shown: directions.value.length > 0 },
     {
       key: 'information',
@@ -156,6 +189,7 @@ const tabs = computed(() =>
       shown: ['accommodations', 'guidedVisits', 'usefulWebsites'].some((k) => travel.value[k]?.length),
     },
     { key: 'related', label: t('record.related.title'), shown: related.value.length + features.value.length > 0 },
+    { key: 'itineraries', label: t('explore.monument.itineraries'), shown: onItineraries.value.length > 0 },
   ].filter((tab) => tab.shown),
 )
 const current = ref('description')
@@ -169,23 +203,47 @@ function move(event, index) {
   event.currentTarget.parentElement.querySelector(`[data-tab="${next.key}"]`)?.focus()
 }
 
+const parentItinerary = computed(() => (sub.value ? collectionById(sub.value.parent_id) : null))
 const crumbs = computed(() => {
   const context = { theme: theme.value }
   const trail = [{ label: t('core.nav.home'), to: { name: 'home' } }]
+  if (sub.value) {
+    const itineraryCountry = itineraryCountries(parentItinerary.value)[0] ?? country.value
+    if (itineraryCountry) {
+      trail.push({ label: title(itineraryCountry, locale.value), to: itinerariesLink(itineraryCountry) })
+    }
+    if (parentItinerary.value) {
+      trail.push({ label: title(parentItinerary.value, locale.value), to: itineraryLink(parentItinerary.value) })
+    }
+    trail.push({ label: title(sub.value, locale.value), to: subItineraryLink(sub.value, location.value) })
+    trail.push({ label: heading.value })
+    return trail
+  }
   if (theme.value) trail.push({ label: title(theme.value, locale.value), to: themeLink(theme.value) })
   if (country.value) trail.push({ label: title(country.value, locale.value), to: placeLink(country.value, context) })
   if (location.value) trail.push({ label: title(location.value, locale.value), to: placeLink(location.value, context) })
   trail.push({ label: heading.value })
   return trail
 })
-const selection = computed(() => ({
-  mode: theme.value ? 'theme' : 'country',
-  theme: theme.value,
-  country: country.value,
-  territory: territoryOf(location.value),
-  location: location.value,
-  monument: monument.value,
-}))
+const selection = computed(() =>
+  sub.value
+    ? {
+        mode: 'itinerary',
+        country: itineraryCountries(parentItinerary.value)[0] ?? country.value,
+        itinerary: parentItinerary.value,
+        subItinerary: sub.value,
+        location: location.value,
+        monument: monument.value,
+      }
+    : {
+        mode: theme.value ? 'theme' : 'country',
+        theme: theme.value,
+        country: country.value,
+        territory: territoryOf(location.value),
+        location: location.value,
+        monument: monument.value,
+      },
+)
 const partnerships = computed(() =>
   monument.value ? partnershipsFor({ theme: theme.value, level: 'monument', id: monument.value.exploreId }) : [],
 )
@@ -196,6 +254,9 @@ const partnerships = computed(() =>
   <p v-else-if="!ready" class="explore-loading">{{ t('core.status.loading') }}</p>
   <ExploreFrame v-else :crumbs="crumbs" :selection="selection" :partnerships="partnerships">
     <article class="explore-page explore-monument" @click="onClick">
+      <p v-if="fromRoute" class="explore-monument__back">
+        <RouterLink :to="routeLink(fromRoute)">{{ t('explore.route.back') }}</RouterLink>
+      </p>
       <h1 class="explore-page__title">
         {{ heading }}<span v-if="place" class="explore-monument__place"> ({{ place }})</span>
       </h1>
@@ -241,6 +302,10 @@ const partnerships = computed(() =>
         </div>
       </section>
 
+      <section v-if="current === 'map'" class="explore-tabs__panel" role="tabpanel">
+        <ExploreMap :pins="pin" :zoom="position?.zoom ?? placePosition(location)?.zoom ?? null" />
+      </section>
+
       <section v-if="current === 'directions'" class="explore-tabs__panel" role="tabpanel">
         <section v-for="entry in directions" :key="entry.key" class="explore-info__section">
           <h3 class="explore-info__heading">{{ entry.label }}</h3>
@@ -261,6 +326,18 @@ const partnerships = computed(() =>
           <p v-if="record.by" class="explore-page__credit">{{ t('sheet.field.preparedBy') }}: {{ record.by }}</p>
         </article>
         <SpecialFeatures :features="features" :tr="featureText" :language="language" :glossary="glossary" :dir="dir" />
+      </section>
+
+      <section v-if="current === 'itineraries'" class="explore-tabs__panel" role="tabpanel">
+        <article v-for="entry in onItineraries" :key="entry.id" class="explore-itinerary">
+          <div class="explore-itinerary__body">
+            <h3 class="explore-itinerary__name">
+              <RouterLink :to="entry.to">{{ entry.name }}</RouterLink>
+              <span v-if="entry.duration" class="explore-itinerary__duration"> [{{ entry.duration }}]</span>
+            </h3>
+            <p v-if="entry.description" class="explore-itinerary__description">{{ entry.description }}</p>
+          </div>
+        </article>
       </section>
 
       <GlossaryPopover :term="active" :html="activeHtml" :dir="dir" @close="close" />
