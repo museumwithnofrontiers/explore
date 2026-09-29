@@ -39,11 +39,18 @@ export function loadTexts(entities, lang) {
   )
 }
 
-/** One record's texts in `lang`, English where it has none in that language. */
+/**
+ * One record's texts in `lang`, field by field English where it has none in
+ * that language: a theme's Spanish row carries its name and no introduction,
+ * and the page still shows one.
+ */
 export function text(entity, id, lang) {
   loaded.has(`${entity}:${lang}`)
   loaded.has(`${entity}:en`)
-  return pkg.tr(entity, id, lang)
+  const english = pkg.tr(entity, id, 'en')
+  if (lang === 'en') return english
+  const own = Object.entries(pkg.tr(entity, id, lang)).filter(([, value]) => value !== '' && value != null)
+  return { ...english, ...Object.fromEntries(own) }
 }
 
 /**
