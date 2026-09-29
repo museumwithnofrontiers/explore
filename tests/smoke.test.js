@@ -72,6 +72,20 @@ describe('website smoke test', () => {
     app.unmount()
   }, 60000)
 
+  it('reads a theme in Spanish: its Spanish name, and English where the Spanish row has no introduction', async () => {
+    const theme = await collection('mwnf3_explore:thematiccycle:1')
+    const { app, host } = await mountOn(`#/theme/${theme.id}?lang=es`, '.explore-tiles__tile')
+
+    expect(host.querySelector('.explore-page__title').textContent.trim()).toBe(
+      'Explorar el patrimonio islámico del Mediterráneo',
+    )
+    expect(host.querySelector('.explore-page__text').textContent).toContain('Did you know that Islam')
+
+    app.unmount()
+    // The site remembers the language chosen; the pages after this one are read in English.
+    globalThis.localStorage.clear()
+  }, 60000)
+
   it('renders a country by theme, and the same country by country', async () => {
     const theme = await collection('mwnf3_explore:thematiccycle:1')
     const spain = await collection('mwnf3_explore:country:es')
