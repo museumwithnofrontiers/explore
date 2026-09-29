@@ -1,10 +1,178 @@
 /*
- * This website's own content styles: the palette its views reference and the
- * building blocks they share (panels, lists, forms, prose).
+ * This website's own content styles: the pages in src/views and the blocks in
+ * src/components, laid out as legacy Explore laid them out.
  *
  * Page chrome — header, banner, navigation, footer — is themed through
  * theme/tokens.css instead. Keep the two apart: tokens.css is read by
- * @museumwnf/viewer-layout, this file only by the views in src/views/.
- *
- * Starts empty on purpose. Nothing here is required for the website to run.
+ * @museumwnf/viewer-layout, this file only by this website's own markup.
  */
+
+.explore-prose > :first-child { margin-top: 0; }
+.explore-prose a,
+.explore-page__credit a { color: var(--explore-green); }
+
+.explore-button {
+  display: inline-block;
+  padding: 0.4rem 1.2rem;
+  border-radius: var(--mwnf-radius);
+  background: var(--explore-green);
+  color: #ffffff;
+  text-decoration: none;
+  font-weight: 600;
+}
+.explore-button:hover,
+.explore-button:focus-visible { background: var(--explore-navy); }
+
+/* ── Home ───────────────────────────────────────────────────────────────── */
+
+.explore-home__description { font-size: 1.125rem; margin-bottom: calc(var(--mwnf-space) * 2); }
+.explore-home__section { margin: calc(var(--mwnf-space) * 3) 0; scroll-margin-top: var(--mwnf-space); }
+.explore-home__heading,
+.explore-home__subheading,
+.explore-page__title,
+.explore-tiles__heading,
+.explore-travel__heading,
+.explore-background__heading { color: var(--explore-navy); font-weight: 400; }
+.explore-home__heading { font-size: 1.75rem; margin: 0 0 var(--mwnf-space); }
+.explore-home__subheading { font-size: 1.375rem; margin: calc(var(--mwnf-space) * 2) 0 var(--mwnf-space); }
+.explore-home__select { max-width: 24rem; margin-bottom: var(--mwnf-space); }
+
+.explore-themes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: var(--mwnf-space);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.explore-themes__card { display: flex; flex-direction: column; background: #ffffff; border: 1px solid var(--mwnf-color-border); }
+.explore-themes__image { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+.explore-themes__body { display: flex; flex: 1; flex-direction: column; gap: 0.5rem; padding: var(--mwnf-space); }
+.explore-themes__name { margin: 0; color: var(--explore-navy); font-size: 1.125rem; }
+.explore-themes__description { flex: 1; margin: 0; color: var(--mwnf-color-muted); }
+.explore-themes__body .explore-button { align-self: flex-start; }
+
+.explore-highlighted {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
+  gap: var(--mwnf-space);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.explore-highlighted__link { position: relative; display: block; color: #ffffff; text-decoration: none; }
+.explore-highlighted__image { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+.explore-highlighted__name,
+.explore-highlighted__description { position: absolute; left: 0; right: 0; padding: 0 var(--mwnf-space); background: rgb(0 0 0 / 55%); }
+.explore-highlighted__name { bottom: 2.5rem; padding-top: 0.5rem; font-size: 1.25rem; }
+.explore-highlighted__description { bottom: 0; height: 2.5rem; overflow: hidden; }
+
+/* ── The frame: the selection beside the page ───────────────────────────── */
+
+.explore-frame { display: grid; grid-template-columns: 17rem minmax(0, 1fr); gap: calc(var(--mwnf-space) * 2); }
+@media (max-width: 48rem) {
+  .explore-frame { grid-template-columns: minmax(0, 1fr); }
+  .explore-frame__aside { order: 2; }
+}
+.explore-select { padding: var(--mwnf-space); background: #ffffff; border: 1px solid var(--mwnf-color-border); }
+.explore-select__heading { margin: 0 0 var(--mwnf-space); color: var(--explore-navy); font-size: 1.125rem; font-weight: 400; }
+.explore-select .mwnf-facet { display: flex; flex-direction: column; gap: 0.25rem; margin-bottom: var(--mwnf-space); }
+.explore-select .mwnf-facet__select { width: 100%; }
+.explore-select__note { margin: 0; font-size: 0.875rem; color: var(--mwnf-color-muted); }
+
+.explore-partnerships { display: flex; flex-wrap: wrap; gap: var(--mwnf-space); margin-top: var(--mwnf-space); }
+.explore-partnerships--column { flex-direction: column; align-items: center; }
+.explore-partnerships--row { justify-content: center; margin: calc(var(--mwnf-space) * 3) 0; }
+.explore-partnerships__entry { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; color: inherit; text-decoration: none; }
+.explore-partnerships__logo { max-width: 8rem; max-height: 5rem; object-fit: contain; }
+.explore-partnerships__title { font-size: 0.875rem; }
+
+.explore-crumbs { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: var(--mwnf-space); font-size: 0.875rem; }
+.explore-crumbs__link { color: var(--explore-green); }
+.explore-crumbs__separator::before { content: '\203A'; }
+
+/* ── Pages ──────────────────────────────────────────────────────────────── */
+
+.explore-page__title { margin: 0 0 0.5rem; font-size: 2rem; }
+.explore-page__subtitle { margin: 0 0 var(--mwnf-space); color: var(--mwnf-color-muted); }
+.explore-page__text { margin: var(--mwnf-space) 0; }
+.explore-page__credit { font-style: italic; color: var(--mwnf-color-muted); }
+
+.explore-tiles { margin: calc(var(--mwnf-space) * 2) 0; }
+.explore-tiles__heading { font-size: 1.75rem; margin: 0 0 var(--mwnf-space); }
+.explore-tiles__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.explore-tiles__tile {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  min-height: 5rem;
+  height: 100%;
+  padding: 0.5rem;
+  overflow: hidden;
+  background: var(--explore-green);
+  color: #ffffff;
+  text-decoration: none;
+}
+.explore-tiles__tile:hover,
+.explore-tiles__tile:focus-visible { background: var(--explore-navy); }
+.explore-tiles__tile--picture { min-height: 8rem; }
+.explore-tiles__image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.explore-tiles__tile--picture .explore-tiles__label { position: relative; padding: 0.1rem 0.4rem; background: rgb(0 0 0 / 55%); }
+.explore-tiles__label { font-size: 1rem; }
+
+.explore-background { margin: calc(var(--mwnf-space) * 2) 0; }
+.explore-background__heading { font-size: 1.375rem; margin: 0 0 var(--mwnf-space); }
+.explore-background__text + .explore-background__text { border-top: var(--mwnf-section-border); padding-top: var(--mwnf-space); }
+
+.explore-info { margin: calc(var(--mwnf-space) * 2) 0; border: 1px solid var(--mwnf-color-border); background: #ffffff; }
+.explore-info--open { margin-top: 0; border: 0; background: transparent; }
+.explore-info a { color: var(--explore-green); }
+.explore-info__summary { padding: 0.5rem var(--mwnf-space); cursor: pointer; color: var(--explore-green); font-weight: 600; text-transform: uppercase; }
+.explore-info__section { padding: 0 var(--mwnf-space) var(--mwnf-space); }
+.explore-info__heading { margin: var(--mwnf-space) 0 0.5rem; color: var(--explore-navy); font-size: 1.125rem; }
+.explore-info__category { margin: 0.5rem 0 0.25rem; font-size: 1rem; }
+.explore-info__contacts,
+.explore-info__websites { margin: 0; padding-left: 1.25rem; }
+.explore-info__contact { display: flex; flex-direction: column; margin-bottom: 0.5rem; }
+.explore-info__note { display: block; color: var(--mwnf-color-muted); }
+
+.explore-travel { margin: calc(var(--mwnf-space) * 2) 0; }
+.explore-travel__heading { font-size: 1.5rem; margin: 0 0 var(--mwnf-space); }
+.explore-travel__record { display: flex; gap: var(--mwnf-space); padding: var(--mwnf-space) 0; border-top: var(--mwnf-section-border); }
+.explore-travel__image { flex: 0 0 9rem; width: 9rem; height: 6rem; object-fit: cover; }
+.explore-travel__body { flex: 1; min-width: 0; }
+.explore-travel__title { margin: 0 0 0.25rem; font-size: 1.125rem; }
+.explore-travel__title a { color: var(--explore-green); }
+.explore-travel__subtitle { margin: 0 0 0.25rem; color: var(--mwnf-color-muted); }
+.explore-travel__intro > :first-child { margin-top: 0; }
+
+/* ── The monument ───────────────────────────────────────────────────────── */
+
+.explore-monument__place { color: var(--mwnf-color-muted); font-size: 1.25rem; }
+.explore-tabs { display: flex; flex-wrap: wrap; gap: 0.25rem; margin: var(--mwnf-space) 0; border-bottom: 2px solid var(--explore-green); }
+.explore-tabs__tab {
+  padding: 0.5rem 0.9rem;
+  border: 0;
+  background: #e6efec;
+  color: var(--explore-green);
+  font: inherit;
+  font-weight: 600;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.explore-tabs__tab--active { background: var(--explore-green); color: #ffffff; }
+.explore-tabs__panel { padding-top: var(--mwnf-space); }
+.explore-monument__source { margin: 0 0 0.5rem; color: var(--mwnf-color-muted); font-style: italic; }
+.explore-monument__name { color: var(--explore-navy); font-weight: 400; font-size: 1.5rem; margin: var(--mwnf-space) 0 0.5rem; }
+.explore-monument__subheading { color: var(--explore-navy); font-size: 1.125rem; }
+.explore-monument__fields { display: grid; grid-template-columns: max-content 1fr; gap: 0.25rem var(--mwnf-space); margin: 0 0 var(--mwnf-space); }
+.explore-monument__fields dt { font-weight: 600; }
+.explore-monument__fields dd { margin: 0; }
+.explore-related + .explore-related { border-top: var(--mwnf-section-border); margin-top: var(--mwnf-space); }
