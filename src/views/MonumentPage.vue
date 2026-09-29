@@ -9,8 +9,8 @@ import { GlossaryPopover, MediaGallery, RecordLanguages, SpecialFeatures } from 
 import AdditionalInformation from '../components/AdditionalInformation.vue'
 import ExploreFrame from '../components/ExploreFrame.vue'
 import {
-  collectionById, countryOf, detailsOf, findMonument, monumentName, partnershipsFor, placeLink, sourceOf, territoryOf,
-  text, themeLink, title, travelFor, useTexts,
+  collectionById, countryOf, detailsOf, findMonument, loadTexts, monumentName, partnershipsFor, placeLink, sourceOf,
+  territoryOf, text, themeLink, title, travelFor, useTexts,
 } from '../composables/explore.js'
 
 // A monument's page, legacy's tabs: its description (its own record's, in
@@ -41,7 +41,12 @@ const theme = computed(() => {
   return collection?.type === 'theme' ? collection : null
 })
 
-const { language, languages, dir, select, text: own, glossary, terms } = useRecordSheet(main, { entity: 'items' })
+const { language, languages, dir, select, glossary, terms } = useRecordSheet(main, { entity: 'items' })
+// The record's text in the language it is read in, field by field English where
+// that language has none: legacy's French row of an Exhibition Trails record
+// is often its name alone.
+const own = computed(() => (main.value ? text('items', main.value.id, language.value) : {}))
+watch(language, (lang) => { if (lang) loadTexts(['items'], lang) }, { immediate: true })
 const { active, onClick, close } = useGlossaryPopup(terms)
 const activeHtml = computed(() => (active.value ? renderBlock(active.value.definition, { breaks: true }) : ''))
 

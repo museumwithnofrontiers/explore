@@ -149,6 +149,19 @@ describe('website smoke test', () => {
     app.unmount()
   }, 60000)
 
+  it('reads a monument in French: its French name, and English where the French row has no description', async () => {
+    const [items] = await loadEntities(['items'])
+    const toledo = await collection('mwnf3_explore:location:337')
+    const trails = items.find((i) => i.backward_compatibility === 'mwnf3_travels:monument:IAM:es:1:IX:1:b')
+    const { app, host } = await mountOn(`#/monument/${trails.id}?location=${toledo.id}&lang=fr`, '.explore-monument__name')
+
+    expect(host.querySelector('.explore-monument__name').textContent.trim()).toBe('Mosquée Cristo de la Luz')
+    expect(host.querySelector('.explore-tabs__panel').textContent).toContain('This mosque, in fact, is two buildings')
+
+    app.unmount()
+    globalThis.localStorage.clear()
+  }, 60000)
+
   it("redirects legacy's addresses to their pages", async () => {
     const [items] = await loadEntities(['items'])
     const toledo = await collection('mwnf3_explore:location:337')
