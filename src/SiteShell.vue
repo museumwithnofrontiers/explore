@@ -9,6 +9,9 @@
 // The one thing SiteShell cannot know is the header lockup: it is a text, and
 // a text is only available inside the application. `#brand` is the slot it
 // reserves for exactly that.
+//
+// The footer credits the organisation as legacy's does ("© <mwnf>"): one
+// dictionary word for both the organisation and the copyright holder.
 import { useI18n } from '@museumwnf/viewer-core'
 import { SiteShell } from '@museumwnf/viewer-layout/components'
 
@@ -19,7 +22,7 @@ const { t } = useI18n()
   <SiteShell
     v-bind="$attrs"
     header-home="#/"
-    :footer-text="t('explore.identity.copyright')"
+    :footer-text="`© ${t('explore.identity.organisation')}`"
   >
     <template #brand>
       <span class="site-logo">
