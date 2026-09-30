@@ -17,9 +17,9 @@
   },
   "dependencies": {
     "@museumwnf/explore-data": "^1.0.4",
-    "@museumwnf/viewer-core": "^2.5.1",
+    "@museumwnf/viewer-core": "^2.5.2",
     "@museumwnf/viewer-i18n": "^6.0.0",
-    "@museumwnf/viewer-layout": "^3.2.1",
+    "@museumwnf/viewer-layout": "^3.2.2",
     "leaflet": "^1.9.4",
     "vue": "^3.5.0",
     "vue-router": "^5.0.0"
