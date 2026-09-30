@@ -64,6 +64,11 @@ describe('website smoke test', () => {
     expect(host.querySelector('.explore-page__text').textContent).toContain('Did you know that Islam')
     expect(host.querySelectorAll('.explore-tiles__tile')).toHaveLength(11)
     expect(host.querySelectorAll('.explore-travel--books .explore-travel__record')).toHaveLength(11)
+    // Each book's cover, the one legacy picks from the Books database: Travel
+    // Book 1 shows its English printed cover 2.
+    const covers = [...host.querySelectorAll('.explore-travel--books .explore-travel__image')]
+    expect(covers).toHaveLength(11)
+    expect(covers[0].getAttribute('src')).toBe('https://images.museumwnf.org/small/books/3/en/31/book/2.jpg')
     expect(host.querySelectorAll('.explore-travel--tours .explore-travel__record')).toHaveLength(14)
     expect(texts(host, '.explore-partnerships__title')).toEqual(['Barakat', 'European Union'])
     // Legacy's "Read in": the languages the theme is written in.
