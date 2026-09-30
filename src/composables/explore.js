@@ -1,5 +1,5 @@
 import { computed, reactive, watch } from 'vue'
-import { entityRef, loadEntities, useDataPackage, useI18n, useSiteConfig } from '@museumwnf/viewer-core'
+import { entityRef, loadEntities, mdStrip, useDataPackage, useI18n, useSiteConfig } from '@museumwnf/viewer-core'
 
 // Explore's records, read the one way every website reads them: lazily, each
 // entity a shared ref that stays `null` until a route declaring it in
@@ -53,6 +53,12 @@ export function text(entity, id, lang) {
   return { ...english, ...Object.fromEntries(own) }
 }
 
+/** A text's first `length` characters, as plain text: legacy cut its cards' and lists' texts so. */
+export function excerpt(value, length) {
+  const plain = mdStrip(value ?? '')
+  return plain.length > length ? `${plain.slice(0, length).trimEnd()}...` : plain
+}
+
 /**
  * The site's languages a collection is translated in, for its "Read in"
  * buttons: every one of them is loaded, and a collection's page reads its
@@ -100,6 +106,7 @@ export const tree = computed(() => {
     root: purpose('explore-root'),
     themesRoot: purpose('explore-themes-root'),
     countriesRoot: purpose('explore-countries-root'),
+    itinerariesRoot: purpose('explore-itineraries-root'),
   }
 })
 
@@ -244,6 +251,52 @@ export function monumentName(monument, lang) {
   return text('items', monument.main.id, lang).name || monument.main.internal_name
 }
 
+/**
+ * A monument's position, legacy's own: its location membership keeps it per
+ * Explore monument id (`explore_geo`), whichever record the monument resolves to.
+ */
+export function positionOf(monument) {
+  for (const member of monument?.location?.items ?? []) {
+    const geo = member.extra?.explore_geo?.[monument.exploreId]
+    if (geo) return { lat: Number(geo.latitude), lng: Number(geo.longitude), zoom: zoomOf(geo.map_zoom) }
+  }
+  return null
+}
+
+/**
+ * A location's historical background: Explore's own text, signed by its
+ * `prepared_by`, then each Travels location's introduction it names, signed by
+ * its author.
+ */
+export function locationBackground(location, lang) {
+  if (location?.type !== 'location') return []
+  const own = text('collections', location.id, lang)
+  const texts = []
+  if (own.description) texts.push({ key: 'own', text: own.description, by: own.extra?.prepared_by ?? '' })
+  for (const key of location.extra?.historical_background ?? []) {
+    const travels = tree.value.byKey.get(key)
+    const travelsText = travels ? text('collections', travels.id, lang) : {}
+    if (travelsText.description) {
+      texts.push({
+        key,
+        text: travelsText.description,
+        by: travelsText.extra?.author || travelsText.extra?.prepared_by || '',
+      })
+    }
+  }
+  return texts
+}
+
+/** A collection's own position: a country's, a territory's or a location's. */
+export function placePosition(collection) {
+  if (collection?.latitude == null || collection?.longitude == null) return null
+  return { lat: Number(collection.latitude), lng: Number(collection.longitude), zoom: zoomOf(collection.map_zoom) }
+}
+
+function zoomOf(value) {
+  return value == null || value === '' ? null : Number(value)
+}
+
 export function findMonument(itemId, locationId) {
   const candidates = locationId
     ? [collectionById(locationId)]
@@ -321,6 +374,152 @@ export function countryPicture(country) {
 /** A theme's pictures, without the country pictures it also carries. */
 export function themePictures(theme) {
   return (theme?.images ?? []).filter((i) => !/ country picture$/.test(i.alt_text ?? ''))
+}
+
+// ── Itineraries ──────────────────────────────────────────────────────────
+//
+// Under the itineraries root: the thematic itineraries (legacy's kind 4),
+// each with its sub-itineraries, and the routes a location links to (kinds
+// 1 to 3, "explore", "also not to be missed", "to know more"). Each keeps its
+// kind and its order among its siblings in `extra.explore_itinerary`; its
+// English translation's `extra` lists its locations in legacy's order. A
+// sub-itinerary's members are its monuments' Travels records, each keeping
+// the Explore monument it stands for and the location legacy files it under.
+
+const itineraryKind = (collection) => collection?.extra?.explore_itinerary?.type ?? null
+const itineraryOrder = (a, b) =>
+  (a.extra?.explore_itinerary?.order ?? 0) - (b.extra?.explore_itinerary?.order ?? 0)
+
+/** The thematic itineraries, in legacy's order. */
+export const itineraries = computed(() =>
+  tree.value.itinerariesRoot
+    ? childrenOf(tree.value.itinerariesRoot.id).filter((c) => itineraryKind(c) === '4').sort(itineraryOrder)
+    : [],
+)
+
+/** The routes a location links to. */
+export const routes = computed(() =>
+  tree.value.itinerariesRoot
+    ? childrenOf(tree.value.itinerariesRoot.id).filter((c) => ['1', '2', '3'].includes(itineraryKind(c)))
+    : [],
+)
+
+/** A route's kind, as legacy names the group it lists it in: `explore`, `notToBeMissed` or `toKnowMore`. */
+export function routeKind(route) {
+  return { 1: 'explore', 2: 'notToBeMissed', 3: 'toKnowMore' }[itineraryKind(route)] ?? null
+}
+
+export function subItinerariesOf(itinerary) {
+  return childrenOf(itinerary?.id).filter((c) => itineraryKind(c) === '4').sort(itineraryOrder)
+}
+
+export function isSubItinerary(collection) {
+  return itineraryKind(collection) === '4' && itineraryKind(collectionById(collection.parent_id)) === '4'
+}
+
+/** A sub-itinerary's or a route's locations, in legacy's order. */
+export function itineraryLocations(itinerary) {
+  const ids = text('collections', itinerary?.id, 'en').extra?.location_ids ?? []
+  return ids.map((id) => exploreCollection('location', id)).filter(Boolean)
+}
+
+/**
+ * The countries an itinerary covers, as legacy's API names them: a thematic
+ * itinerary's own list, a sub-itinerary's `country_ids`.
+ */
+export function itineraryCountries(itinerary) {
+  const own = itinerary?.extra?.explore_itinerary?.countries ?? []
+  const codes = own.length ? own : (text('collections', itinerary?.id, 'en').extra?.country_ids ?? [])
+  return [...new Set(codes)].map((code) => exploreCollection('country', code)).filter(Boolean)
+}
+
+/** The countries with thematic itineraries, by name. */
+export function countriesWithItineraries(lang) {
+  const seen = new Map()
+  for (const itinerary of itineraries.value) {
+    for (const country of itineraryCountries(itinerary)) seen.set(country.id, country)
+  }
+  return [...seen.values()].sort(byTitle(lang))
+}
+
+export function itinerariesIn(country) {
+  return itineraries.value.filter((i) => itineraryCountries(i).some((c) => c.id === country?.id))
+}
+
+function monumentByExploreId(exploreId, location) {
+  const id = String(exploreId)
+  const inLocation = location ? monumentsOf(location).find((m) => m.exploreId === id) : null
+  if (inLocation) return inLocation
+  for (const candidate of (collections.value ?? []).filter((c) => c.type === 'location')) {
+    const hit = monumentsOf(candidate).find((m) => m.exploreId === id)
+    if (hit) return hit
+  }
+  return null
+}
+
+/**
+ * A sub-itinerary's or a route's monuments, in its order: all of them, or
+ * those legacy files under one of its locations.
+ */
+export function itineraryMonuments(itinerary, location = null) {
+  const members = [...(itinerary?.items ?? [])]
+    .filter((m) => m.extra?.explore_monument_id != null)
+    .filter((m) => !location || String(m.extra.location_id) === legacyId(location))
+    // Legacy lists two monuments of one rank by their id.
+    .sort(
+      (a, b) =>
+        (a.extra.mn_order ?? 0) - (b.extra.mn_order ?? 0) ||
+        Number(a.extra.explore_monument_id) - Number(b.extra.explore_monument_id),
+    )
+  const seen = new Set()
+  const monuments = []
+  for (const member of members) {
+    const place = location ?? exploreCollection('location', member.extra.location_id)
+    const monument = monumentByExploreId(member.extra.explore_monument_id, place)
+    if (monument && !seen.has(monument.exploreId)) {
+      seen.add(monument.exploreId)
+      monuments.push(monument)
+    }
+  }
+  return monuments
+}
+
+/**
+ * An itinerary's picture: a thematic itinerary's own; for a sub-itinerary,
+ * none of its own, so, as legacy's API does, one of its first location's
+ * monuments'.
+ */
+export function itineraryPicture(itinerary) {
+  const own = itinerary?.images?.[0]?.url
+  if (own) return own
+  const [first] = itineraryLocations(itinerary)
+  const [monument] = first ? itineraryMonuments(itinerary, first) : []
+  return monument?.main.images?.[0]?.url ?? null
+}
+
+/** The sub-itineraries a monument is on. */
+export function itinerariesOf(monument) {
+  if (!monument) return []
+  const parents = itineraries.value.flatMap((itinerary) => subItinerariesOf(itinerary))
+  return parents.filter((sub) =>
+    (sub.items ?? []).some((m) => String(m.extra?.explore_monument_id) === monument.exploreId),
+  )
+}
+
+export function itineraryLink(itinerary) {
+  return { name: 'itinerary', params: { id: itinerary.id } }
+}
+
+export function subItineraryLink(sub, location = null) {
+  return { name: 'sub-itinerary', params: { id: sub.id }, query: location ? { location: location.id } : {} }
+}
+
+export function routeLink(route) {
+  return { name: 'route', params: { id: route.id } }
+}
+
+export function itinerariesLink(country) {
+  return { name: 'itineraries', params: { id: country.id } }
 }
 
 // ── Site records ─────────────────────────────────────────────────────────
@@ -414,29 +613,58 @@ export function themeLink(theme) {
   return { name: 'theme', params: { id: theme.id } }
 }
 
-export function monumentLink(monument, { theme = null } = {}) {
+/** A monument's page, keeping the theme, the sub-itinerary or the route it is explored by. */
+export function monumentLink(monument, { theme = null, sub = null, route = null } = {}) {
   const query = { location: monument.location.id }
   if (theme) query.theme = theme.id
+  if (sub) query.itinerary = sub.id
+  if (route) query.route = route.id
   return { name: 'monument', params: { id: monument.main.id }, query }
 }
 
 /**
- * Legacy's addresses: `/themes/t-1/c-es/tr-8/l-337/m-557/lan-en` and
- * `/countries/c-es/f-3/l-337/m-557`, each segment named by its prefix. The
+ * Legacy's addresses: `/themes/t-1/c-es/tr-8/l-337/m-557/lan-en`,
+ * `/countries/c-es/f-3/l-337/r-113/m-557` and
+ * `/itineraries/c-pt/i-97/si-100/m-557`, each segment named by its prefix. The
  * deepest one names the page; the theme and the language travel along. A
  * filter's legacy id has no counterpart in the package, so it is dropped.
  */
-export async function resolveLegacyPath(path) {
+export async function resolveLegacyPath(path, section = null) {
   await loadEntities(['collections', 'items', 'languages'])
   const parts = {}
   for (const segment of String(path ?? '').split('/')) {
-    const match = /^(lan|tr|t|c|f|l|r|m)-(.+)$/.exec(segment)
+    const match = /^(lan|tr|si|t|c|f|l|r|m|i)-(.+)$/.exec(segment)
     if (match) parts[match[1]] = match[2]
   }
   const theme = parts.t ? exploreCollection('thematiccycle', parts.t) : null
   const query = {}
   if (theme) query.theme = theme.id
   if (parts.lan) query.lang = parts.lan
+  const sub = parts.si ? exploreCollection('itinerary', parts.si) : null
+  const route = parts.r ? exploreCollection('itinerary', parts.r) : null
+  const along = sub ?? route
+  if (parts.m && along) {
+    const member = (along.items ?? []).find((m) => String(m.extra?.explore_monument_id) === parts.m)
+    const monument = member
+      ? monumentByExploreId(parts.m, exploreCollection('location', member.extra.location_id))
+      : null
+    if (monument) {
+      const context = sub ? { itinerary: sub.id } : { route: route.id }
+      return {
+        name: 'monument',
+        params: { id: monument.main.id },
+        query: { ...query, location: monument.location.id, ...context },
+      }
+    }
+  }
+  if (sub) return { name: 'sub-itinerary', params: { id: sub.id }, query }
+  if (route) return { name: 'route', params: { id: route.id }, query }
+  const itinerary = parts.i ? exploreCollection('itinerary', parts.i) : null
+  if (itinerary) return { name: 'itinerary', params: { id: itinerary.id }, query }
+  if (section === 'itineraries' && parts.c) {
+    const country = exploreCollection('country', parts.c)
+    if (country) return { name: 'itineraries', params: { id: country.id }, query }
+  }
   const location = parts.l ? exploreCollection('location', parts.l) : null
   if (parts.m && location) {
     const monument = monumentsOf(location).find((m) => m.exploreId === parts.m)

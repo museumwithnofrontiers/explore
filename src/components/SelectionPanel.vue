@@ -4,16 +4,19 @@ import { useRouter } from 'vue-router'
 import { useI18n } from '@museumwnf/viewer-core'
 import { FacetSelect } from '@museumwnf/viewer-layout/content'
 import {
-  byTitle, countries, filtersOf, monumentLink, monumentName, placeLink, shownLocations, shownMonuments,
-  shownTerritories, themeCountries, themeLink, themes, title,
+  byTitle, countries, countriesWithItineraries, filtersOf, itinerariesIn, itinerariesLink, itineraryLink,
+  itineraryLocations, itineraryMonuments, monumentLink, monumentName, placeLink, shownLocations, shownMonuments,
+  shownTerritories, subItinerariesOf, subItineraryLink, themeCountries, themeLink, themes, title,
 } from '../composables/explore.js'
 
 // Legacy's "Make Your Selection": one select per step of the path, each
 // listing what the step above leaves, the steps already taken selected.
 // Picking one goes to its page. By theme the steps are themes, countries,
-// territories, locations and monuments; by country a filter comes second.
+// territories, locations and monuments; by country a filter comes second; by
+// itinerary, countries, itineraries, sub-itineraries, their locations and
+// their monuments.
 const props = defineProps({
-  /** 'theme' or 'country': the path the visitor is on. */
+  /** 'theme', 'country' or 'itinerary': the path the visitor is on. */
   mode: { type: String, required: true },
   theme: { type: Object, default: null },
   country: { type: Object, default: null },
@@ -22,6 +25,8 @@ const props = defineProps({
   location: { type: Object, default: null },
   /** The monument shown, as `monumentsOf()` builds it. */
   monument: { type: Object, default: null },
+  itinerary: { type: Object, default: null },
+  subItinerary: { type: Object, default: null },
 })
 const { t, locale } = useI18n()
 const router = useRouter()
@@ -76,9 +81,37 @@ const pickMonument = (value) => {
   go(hit && monumentLink(hit.monument, { theme: props.theme }))
 }
 
+// The itinerary path.
+const itineraryCountryOptions = computed(() => countriesWithItineraries(locale.value).map(option))
+const itineraryOptions = computed(() => (props.country ? itinerariesIn(props.country).map(option) : []))
+const subOptions = computed(() => subItinerariesOf(props.itinerary).map(option))
+const subLocations = computed(() => itineraryLocations(props.subItinerary))
+const subLocationOptions = computed(() => subLocations.value.map(option))
+const subMonuments = computed(() =>
+  props.subItinerary
+    ? itineraryMonuments(props.subItinerary, props.location).map((m) => ({
+        monument: m,
+        value: `${m.location.id}|${m.main.id}`,
+        label: monumentName(m, locale.value),
+      }))
+    : [],
+)
+const pickItineraryCountry = (id) => go(itinerariesLink(byId(countriesWithItineraries(locale.value), id)))
+const pickItinerary = (id) => go(itineraryLink(byId(itinerariesIn(props.country), id)))
+const pickSub = (id) => go(subItineraryLink(byId(subItinerariesOf(props.itinerary), id)))
+const pickSubLocation = (id) => go(subItineraryLink(props.subItinerary, byId(subLocations.value, id)))
+const pickSubMonument = (value) => {
+  const hit = subMonuments.value.find((m) => m.value === value)
+  go(hit && monumentLink(hit.monument, { sub: props.subItinerary }))
+}
+
 // Legacy's sentence under the selection, one form per path, then its link home.
 const exploring = computed(() =>
-  props.mode === 'theme' ? t('explore.select.exploringTheme') : t('explore.select.exploringCountry'),
+  props.mode === 'theme'
+    ? t('explore.select.exploringTheme')
+    : props.mode === 'itinerary'
+      ? t('explore.select.exploringItinerary')
+      : t('explore.select.exploringCountry'),
 )
 </script>
 
@@ -91,6 +124,13 @@ const exploring = computed(() =>
       <FacetSelect :label="`3. ${t('explore.select.territories')}`" :placeholder="t('explore.select.pickTerritory')" :options="territoryOptions" :model-value="territory?.id ?? ''" :disabled="!territoryOptions.length" @update:model-value="pickTerritory" />
       <FacetSelect :label="`4. ${t('explore.select.locations')}`" :placeholder="t('explore.select.pickLocation')" :options="locationOptions" :model-value="location?.id ?? ''" :disabled="!locationOptions.length" @update:model-value="pickLocation" />
       <FacetSelect :label="`5. ${t('explore.select.monuments')}`" :placeholder="t('explore.select.pickMonument')" :options="monuments" :model-value="monumentValue" :disabled="!monuments.length" @update:model-value="pickMonument" />
+    </template>
+    <template v-else-if="mode === 'itinerary'">
+      <FacetSelect :label="`1. ${t('explore.select.countries')}`" :placeholder="t('explore.select.pickCountry')" :options="itineraryCountryOptions" :model-value="country?.id ?? ''" @update:model-value="pickItineraryCountry" />
+      <FacetSelect :label="`2. ${t('explore.itinerary.itineraries')}`" :placeholder="t('explore.itinerary.pickItinerary')" :options="itineraryOptions" :model-value="itinerary?.id ?? ''" :disabled="!itineraryOptions.length" @update:model-value="pickItinerary" />
+      <FacetSelect :label="`3. ${t('explore.itinerary.subItineraries')}`" :placeholder="t('explore.itinerary.pickSubItinerary')" :options="subOptions" :model-value="subItinerary?.id ?? ''" :disabled="!subOptions.length" @update:model-value="pickSub" />
+      <FacetSelect :label="`4. ${t('explore.select.locations')}`" :placeholder="t('explore.select.pickLocation')" :options="subLocationOptions" :model-value="location?.id ?? ''" :disabled="!subLocationOptions.length" @update:model-value="pickSubLocation" />
+      <FacetSelect :label="`5. ${t('explore.select.monuments')}`" :placeholder="t('explore.select.pickMonument')" :options="subMonuments" :model-value="monumentValue" :disabled="!subMonuments.length" @update:model-value="pickSubMonument" />
     </template>
     <template v-else>
       <FacetSelect :label="`1. ${t('explore.select.countries')}`" :placeholder="t('explore.select.pickCountry')" :options="countryOptions" :model-value="country?.id ?? ''" @update:model-value="pickCountry" />

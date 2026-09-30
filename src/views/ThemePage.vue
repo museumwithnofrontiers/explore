@@ -4,11 +4,12 @@ import { NotFoundView, languageLabels, md, useI18n, useRecordLanguage } from '@m
 import { RecordLanguages } from '@museumwnf/viewer-layout/content'
 import AdditionalInformation from '../components/AdditionalInformation.vue'
 import ExploreFrame from '../components/ExploreFrame.vue'
+import ExploreMap from '../components/ExploreMap.vue'
 import ExploreTiles from '../components/ExploreTiles.vue'
 import TravelRecords from '../components/TravelRecords.vue'
 import {
-  byTitle, collectionById, countryPicture, legacyId, partnershipsFor, placeLink, text, themeCountries, title,
-  travelFor, useCollectionLanguages, useTexts,
+  byTitle, collectionById, countryPicture, legacyId, partnershipsFor, placeLink, placePosition, text, themeCountries,
+  title, travelFor, useCollectionLanguages, useTexts,
 } from '../composables/explore.js'
 
 // A theme's page: its introduction, in any language it is written in, then
@@ -37,6 +38,13 @@ const countryTiles = computed(() =>
     to: placeLink(country, { theme: theme.value }),
   })),
 )
+// Legacy's map: the theme's countries, no closer than the theme's own zoom.
+const pins = computed(() =>
+  themeCountries(theme.value).flatMap((country) => {
+    const at = placePosition(country)
+    return at ? [{ ...at, label: title(country, locale.value), to: placeLink(country, { theme: theme.value }) }] : []
+  }),
+)
 const travel = computed(() => travelFor('theme', legacyId(theme.value)))
 const crumbs = computed(() => [{ label: t('core.nav.home'), to: { name: 'home' } }, { label: title(theme.value, locale.value) }])
 </script>
@@ -54,6 +62,7 @@ const crumbs = computed(() => [{ label: t('core.nav.home'), to: { name: 'home' }
       <h1 class="explore-page__title" :dir="dir || undefined">{{ name }}</h1>
       <RecordLanguages :languages="languageLabels(languages)" :language="language" @select="select" />
       <div class="explore-page__text explore-prose" :dir="dir || undefined" v-html="description"></div>
+      <ExploreMap v-if="pins.length" :pins="pins" :zoom="placePosition(theme)?.zoom ?? null" />
       <ExploreTiles :heading="t('explore.next.country')" :tiles="countryTiles" />
       <AdditionalInformation :travel="travel" />
       <TravelRecords :books="travel.books" :tours="travel.tours" />
