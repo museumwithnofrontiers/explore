@@ -85,19 +85,21 @@ const place = computed(() =>
 
 // ── Where each record comes from ──────────────────────────────────────────
 
-// Legacy's dictionary names two of the sources; a Sharing History record is
-// named by its project alone, and Explore's own by nothing. Legacy calls a
-// museum "Virtual Museum", with its project.
+// Legacy's dictionary names two of the sources, and Explore's own record is
+// named by nothing. Legacy calls a museum "Virtual Museum", with its project,
+// and a Sharing History record too when it leads the page; as related content
+// it names one by a word its dictionary lacks, so there the project alone.
 const sourceLabels = computed(() => ({
   trails: t('explore.source.trails'),
   virtualMuseum: t('explore.source.virtualMuseum'),
 }))
-function sourceLine({ kind, record }, lang) {
+function sourceLine({ kind, record }, lang, { leads = false } = {}) {
   if (kind === 'explore') return ''
   const museum = kind === 'museum'
   const projectId = museum ? record.project_uuids?.find((id) => manifest.projects?.[id]) : record.project_id
   const project = manifest.projects?.[projectId]?.name
-  const label = museum ? sourceLabels.value.virtualMuseum : sourceLabels.value[sourceOf(record).source]
+  const source = museum ? 'virtualMuseum' : sourceOf(record).source
+  const label = sourceLabels.value[leads && source === 'sharingHistory' ? 'virtualMuseum' : source]
   return [label, project?.[lang] ?? project?.en].filter(Boolean).join(' — ')
 }
 
@@ -124,7 +126,7 @@ const sheet = computed(() => {
   const pictured = lead.value.record
   const name = x.name ?? text('items', main.value.id, language.value).name ?? pictured.internal_name
   return {
-    source: sourceLine(lead.value, language.value),
+    source: sourceLine(lead.value, language.value, { leads: true }),
     name: mdInline(name, { glossary: glossary.value }),
     images: images(pictured, language.value, name),
     fields: [
