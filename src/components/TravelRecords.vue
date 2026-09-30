@@ -5,9 +5,8 @@ import { recordTexts } from '../composables/explore.js'
 
 // A page's MWNF Travel Books and MWNF Tours, the travel layer legacy shows
 // under the content (decision D1): each one's title linked to its page on the
-// Books or Travels site, its presentation under it, and a tour's picture and
-// places. A Travel Book's cover is not carried: no rule in legacy's data
-// explains which one it showed.
+// Books or Travels site, its presentation under it, a book's cover (at the
+// size legacy shows it) and a tour's picture and places.
 const props = defineProps({
   books: { type: Array, default: () => [] },
   tours: { type: Array, default: () => [] },
@@ -22,7 +21,7 @@ function entry(record, kind) {
     subtitle: texts.subtitle ?? '',
     intro: md(texts.intro ?? ''),
     href: texts.read_more ?? null,
-    image: kind === 'tour' ? mediaUrl(record.image) : null,
+    image: kind === 'book' ? mediaUrl(texts.cover, 'small') : mediaUrl(record.image),
   }
 }
 
@@ -34,6 +33,7 @@ const tours = computed(() => props.tours.map((tour) => entry(tour, 'tour')))
   <section v-if="books.length" class="explore-travel explore-travel--books">
     <h2 class="explore-travel__heading">{{ t('explore.travel.books') }}</h2>
     <article v-for="book in books" :key="book.id" class="explore-travel__record">
+      <img v-if="book.image" class="explore-travel__image" :src="book.image" alt="" loading="lazy" />
       <div class="explore-travel__body">
         <h3 class="explore-travel__title">
           <a v-if="book.href" :href="book.href" target="_blank" rel="noopener" v-html="book.title"></a>
