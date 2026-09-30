@@ -161,7 +161,8 @@ export default {
       name: 'monument',
       component: MonumentPage,
       props: true,
-      meta: meta('explore', 'items'),
+      // The partners: the museums some monuments are, whose texts legacy shows.
+      meta: meta('explore', 'items', 'partners'),
     },
     // The itineraries: a country's list, a thematic itinerary, a
     // sub-itinerary; and a location's routes, drawn as sub-itineraries are.

@@ -11,15 +11,17 @@ import ExploreFrame from '../components/ExploreFrame.vue'
 import ExploreMap from '../components/ExploreMap.vue'
 import {
   collectionById, countryOf, detailsOf, excerpt, findMonument, isSubItinerary, itinerariesLink, itinerariesOf,
-  itineraryCountries, itineraryLink, loadTexts, monumentName, partnershipsFor, placeLink, placePosition, positionOf,
-  routeKind, routeLink, sourceOf, subItineraryLink, territoryOf, text, themeLink, title, travelFor, useTexts,
+  itineraryCountries, itineraryLink, loadTexts, monumentName, monumentView, partnershipsFor, placeLink,
+  placePosition, positionOf, routeKind, routeLink, sourceOf, subItineraryLink, territoryOf, text, themeLink, title,
+  travelFor, useTexts,
 } from '../composables/explore.js'
 
-// A monument's page, legacy's tabs: its description (its own record's, in
-// any language the record carries), its map, how to get there, the travel
-// layer's practical information, its related content — the other records
-// the Explore monument stands for, and its record's special features — and
-// the sub-itineraries it is on.
+// A monument's page, legacy's tabs: its description (in any language its
+// record carries), its map, how to get there, the travel layer's practical
+// information, its related content — the other records and the museum the
+// Explore monument stands for, and its record's special features — and the
+// sub-itineraries it is on. Which of its records the description shows, and
+// which are related content, is legacy's rule (`monumentView`).
 //
 // The address names the monument by its own record (`/monument/:id`) and the
 // location it is explored from (`?location=`): one record can be a monument
@@ -53,12 +55,26 @@ const fromRoute = computed(() => {
   return collection && routeKind(collection) ? collection : null
 })
 
-const { language, languages, dir, select, glossary, terms } = useRecordSheet(main, { entity: 'items' })
-// The record's text in the language it is read in, field by field English where
+const view = computed(() => monumentView(monument.value))
+const lead = computed(() => view.value.lead)
+const isMuseum = computed(() => lead.value?.kind === 'museum')
+
+const { language, languages, dir, select, glossary, terms } = useRecordSheet(main, {
+  entity: 'items',
+  translations: ['partners'],
+  languages: () => (isMuseum.value ? lead.value.record.languages : main.value?.languages),
+})
+// An entry's text in the language it is read in, field by field English where
 // that language has none: legacy's French row of an Exhibition Trails record
-// is often its name alone.
-const own = computed(() => (main.value ? text('items', main.value.id, language.value) : {}))
-watch(language, (lang) => { if (lang) loadTexts(['items'], lang) }, { immediate: true })
+// is often its name alone. Explore's own text about a record is that record's
+// `explore` row; a museum's is its partner's.
+function entryText({ kind, record }, lang) {
+  if (kind === 'museum') return text('partners', record.id, lang)
+  const x = text('items', record.id, lang)
+  return kind === 'explore' ? (x.explore ?? {}) : x
+}
+const own = computed(() => (lead.value ? entryText(lead.value, language.value) : {}))
+watch(language, (lang) => { if (lang) loadTexts(['items', 'partners'], lang) }, { immediate: true })
 const { active, onClick, close } = useGlossaryPopup(terms)
 const activeHtml = computed(() => (active.value ? renderBlock(active.value.definition, { breaks: true }) : ''))
 
@@ -70,14 +86,19 @@ const place = computed(() =>
 // ── Where each record comes from ──────────────────────────────────────────
 
 // Legacy's dictionary names two of the sources; a Sharing History record is
-// named by its project alone, and Explore's own by nothing.
+// named by its project alone, and Explore's own by nothing. Legacy calls a
+// museum "Virtual Museum", with its project.
 const sourceLabels = computed(() => ({
   trails: t('explore.source.trails'),
   virtualMuseum: t('explore.source.virtualMuseum'),
 }))
-function sourceLine(record, lang) {
-  const project = manifest.projects?.[record.project_id]?.name
-  return [sourceLabels.value[sourceOf(record).source], project?.[lang] ?? project?.en].filter(Boolean).join(' — ')
+function sourceLine({ kind, record }, lang) {
+  if (kind === 'explore') return ''
+  const museum = kind === 'museum'
+  const projectId = museum ? record.project_uuids?.find((id) => manifest.projects?.[id]) : record.project_id
+  const project = manifest.projects?.[projectId]?.name
+  const label = museum ? sourceLabels.value.virtualMuseum : sourceLabels.value[sourceOf(record).source]
+  return [label, project?.[lang] ?? project?.en].filter(Boolean).join(' — ')
 }
 
 function images(record, lang, name) {
@@ -97,17 +118,19 @@ function images(record, lang, name) {
 
 const credit = (label, value) => (value ? { label, value } : null)
 const sheet = computed(() => {
-  if (!main.value) return null
+  if (!lead.value) return null
   const x = own.value
-  const name = x.name ?? main.value.internal_name
+  // Explore's own text shows with its record's pictures.
+  const pictured = lead.value.record
+  const name = x.name ?? text('items', main.value.id, language.value).name ?? pictured.internal_name
   return {
-    source: sourceLine(main.value, language.value),
+    source: sourceLine(lead.value, language.value),
     name: mdInline(name, { glossary: glossary.value }),
-    images: images(main.value, language.value, name),
+    images: images(pictured, language.value, name),
     fields: [
-      credit(t('sheet.field.alsoKnownAs'), x.alternate_name),
+      credit(t('sheet.field.alsoKnownAs'), x.alternate_name || x.also_known_as),
       credit(t('sheet.field.date'), x.dates),
-      credit(t('sheet.field.location'), x.location),
+      credit(t('sheet.field.location'), x.location || x.city),
     ].filter(Boolean),
     description: md(x.description, { glossary: glossary.value }),
     history: md(x.history, { glossary: glossary.value }),
@@ -124,12 +147,13 @@ const sheet = computed(() => {
 // ── Getting there ─────────────────────────────────────────────────────────
 
 const directions = computed(() => {
-  if (!main.value) return []
+  if (!lead.value) return []
   const x = own.value
   return [
     { key: 'howToReach', label: t('explore.info.howToReach'), value: x.how_to_reach || x.explore?.how_to_reach },
     { key: 'contact', label: t('explore.info.contact'), value: x.contact || x.monument_contact },
-    { key: 'information', label: t('explore.info.information'), value: x.info || x.explore?.info },
+    // A museum's information is its opening hours.
+    { key: 'information', label: t('explore.info.information'), value: x.info || x.explore?.info || x.opening_hours },
   ]
     .filter((entry) => entry.value)
     .map((entry) => ({ ...entry, html: md(entry.value) }))
@@ -140,12 +164,13 @@ const travel = computed(() => (monument.value ? travelFor('monument', monument.v
 // ── Related content ───────────────────────────────────────────────────────
 
 const related = computed(() =>
-  (monument.value?.related ?? []).map((record) => {
-    const x = text('items', record.id, language.value)
+  view.value.related.map((entry) => {
+    const { record } = entry
+    const x = entryText(entry, language.value)
     const name = x.name ?? record.internal_name
     return {
       id: record.id,
-      source: sourceLine(record, language.value),
+      source: sourceLine(entry, language.value),
       name: mdInline(name),
       images: images(record, language.value, name),
       description: md(x.description),

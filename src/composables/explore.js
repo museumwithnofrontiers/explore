@@ -19,6 +19,7 @@ const pkg = useDataPackage()
 export const collections = entityRef('collections')
 export const items = entityRef('items')
 export const languageRecords = entityRef('languages')
+export const partners = entityRef('partners')
 
 // ── Texts ────────────────────────────────────────────────────────────────
 //
@@ -179,10 +180,11 @@ export function locationsUnder(place) {
 //
 // An Explore monument is an id on a location's memberships
 // (`explore_monument_ids`). Most stand for another database's record, and
-// some for several: legacy shows one of them as the monument and the others
-// as its related content. Its pick, read from the live site over every
-// crawled monument: an Exhibition Trails (Travels) record first, then a
-// Virtual Museum one, then Sharing History, then Explore's own.
+// some for several; some are museums (`explore_museums`, partners). Legacy
+// shows one of them as the monument and the others as its related content,
+// by its API's rule (`monumentView`). Among the records, an Exhibition Trails
+// (Travels) record comes first, then a Virtual Museum one, then Sharing
+// History, then Explore's own.
 
 const SOURCES = [
   ['mwnf3_travels:', 'trails'],
@@ -217,17 +219,29 @@ export function detailsOf(item) {
 
 const monumentCache = new WeakMap()
 
-/** A location's monuments: `{ exploreId, location, main, related }`, one per Explore monument id. */
+/**
+ * A location's monuments, one per Explore monument id: `{ exploreId,
+ * location, main, related, museumKeys }`. `main` is the record the monument
+ * is addressed by, its first by source, and `related` its other records;
+ * `museumKeys` the partner keys of the museums it is, in legacy's order.
+ */
 export function monumentsOf(location) {
   if (!location) return []
   const lookup = itemById.value
   const cached = monumentCache.get(location)
   if (cached?.lookup === lookup) return cached.monuments
   const groups = new Map()
+  const museums = new Map()
   for (const member of location.items ?? []) {
     for (const exploreId of member.extra?.explore_monument_ids ?? []) {
       if (!groups.has(exploreId)) groups.set(exploreId, [])
       groups.get(exploreId).push(member.id)
+      // A monument with several records names its museums on each membership.
+      const keys = museums.get(exploreId) ?? []
+      for (const key of member.extra?.explore_museums?.[exploreId] ?? []) {
+        if (!keys.includes(key)) keys.push(key)
+      }
+      museums.set(exploreId, keys)
     }
   }
   const monuments = [...groups]
@@ -235,11 +249,68 @@ export function monumentsOf(location) {
       const records = ids.map((id) => lookup.get(id)).filter(Boolean)
       // A stable sort: records of one source keep the membership's order.
       const [main, ...related] = [...records].sort((a, b) => sourceOf(a).rank - sourceOf(b).rank)
-      return { exploreId: String(exploreId), location, main, related }
+      return { exploreId: String(exploreId), location, main, related, museumKeys: museums.get(exploreId) ?? [] }
     })
     .filter((m) => m.main)
   monumentCache.set(location, { lookup, monuments })
   return monuments
+}
+
+const partnerByKey = computed(() => new Map((partners.value ?? []).map((p) => [p.backward_compatibility, p])))
+
+/** The museums a monument is, as partners, in legacy's order. */
+export function museumsOf(monument) {
+  return (monument?.museumKeys ?? []).map((key) => partnerByKey.value.get(key)).filter(Boolean)
+}
+
+/**
+ * What a monument's page shows, by legacy's rule (its API's
+ * `MonumentResource`, the analysis doc's "Legacy's record for a monument"):
+ * `{ lead, related }`, each entry `{ kind, record }` — `kind` `record` for an
+ * item, `explore` for Explore's own text about a record, `museum` for a
+ * partner. The lead is the first of:
+ * 1. Explore's own text, when it has a description;
+ * 2. the first museum the monument is;
+ * 3. the first of its records, by source, then in legacy's order within it;
+ * 4. Explore's own record, without a description.
+ * The related content is then one museum at most and the other records.
+ * Explore's own record is never related content.
+ */
+export function monumentView(monument) {
+  if (!monument) return { lead: null, related: [] }
+  const all = [monument.main, ...monument.related]
+  // Within a source, legacy takes Travels and Virtual Museum records by
+  // English title, and Sharing History records in their numbers' order (its
+  // title sort reads a field that model doesn't have).
+  const order = (record) =>
+    sourceOf(record).source === 'sharingHistory'
+      ? Number(legacyId(record))
+      : mdStrip(text('items', record.id, 'en').name ?? '')
+  const within = (a, b) => (order(a) < order(b) ? -1 : order(a) > order(b) ? 1 : 0)
+  const records = all
+    .filter((record) => sourceOf(record).source !== 'explore')
+    .sort((a, b) => sourceOf(a).rank - sourceOf(b).rank || within(a, b))
+  const native = all.find((record) => sourceOf(record).source === 'explore') ?? null
+  const museums = museumsOf(monument)
+  const exploreDescription = native
+    ? text('items', native.id, 'en').description
+    : text('items', monument.main.id, 'en').explore?.description
+
+  const entries = (list, kind) => list.map((record) => ({ kind, record }))
+  if (exploreDescription) {
+    const lead = native ? { kind: 'record', record: native } : { kind: 'explore', record: monument.main }
+    return { lead, related: [...entries(museums.slice(0, 1), 'museum'), ...entries(records, 'record')] }
+  }
+  if (museums.length > 0) {
+    return {
+      lead: { kind: 'museum', record: museums[0] },
+      related: [...entries(museums.slice(1, 2), 'museum'), ...entries(records, 'record')],
+    }
+  }
+  if (records.length > 0) {
+    return { lead: { kind: 'record', record: records[0] }, related: entries(records.slice(1), 'record') }
+  }
+  return { lead: native ? { kind: 'record', record: native } : null, related: [] }
 }
 
 /** Explore's name for a monument, which is how legacy lists it; the record's own name where Explore has none. */

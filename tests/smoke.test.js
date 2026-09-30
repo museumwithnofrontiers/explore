@@ -155,6 +155,41 @@ describe('website smoke test', () => {
     app.unmount()
   }, 60000)
 
+  it("renders a monument that is a museum: the museum's own texts, as legacy's Virtual Museum", async () => {
+    const [items] = await loadEntities(['items'])
+    const kairouan = await collection('mwnf3_explore:location:472')
+    // Monument 1032 is the Museum of Islamic Art (Kairouan): Explore has no
+    // description of it, so legacy shows the museum's own.
+    const record = items.find((i) => i.backward_compatibility === 'mwnf3_explore:monument:1032')
+    const { app, host } = await mountOn(`#/monument/${record.id}?location=${kairouan.id}`, '.explore-monument__name')
+
+    expect(host.querySelector('.explore-monument__source').textContent).toBe('Virtual Museum — Discover Islamic Art')
+    expect(host.querySelector('.explore-tabs__panel').textContent).toContain('located in Raqqada')
+    // Explore's own record of it is never related content.
+    expect(texts(host, '.explore-tabs__tab')).not.toContain('Related Content')
+
+    app.unmount()
+  }, 60000)
+
+  it("renders a monument by Explore's own text where it has a description, its record as related content", async () => {
+    const [items] = await loadEntities(['items'])
+    const lamego = await collection('mwnf3_explore:location:108')
+    // Monument 128, Lamego's cathedral, is a Travels record, and Explore
+    // describes it itself: legacy shows Explore's text, unnamed, and the
+    // Travels record as related content.
+    const trails = items.find((i) => i.backward_compatibility === 'mwnf3_travels:monument:GPA:pt:1:IV:2:a')
+    const { app, host } = await mountOn(`#/monument/${trails.id}?location=${lamego.id}`, '.explore-monument__name')
+
+    expect(host.querySelector('.explore-tabs__panel .explore-monument__source')).toBeNull()
+    expect(host.querySelector('.explore-tabs__panel').textContent).toContain('Lamego Cathedral dates back to the 11th century')
+    const tabs = texts(host, '.explore-tabs__tab')
+    host.querySelectorAll('.explore-tabs__tab')[tabs.indexOf('Related Content')].click()
+    await vi.waitFor(() => expect(host.querySelector('.explore-related')).not.toBeNull())
+    expect(host.querySelector('.explore-related .explore-monument__source').textContent).toBe('Exhibition Trails')
+
+    app.unmount()
+  }, 60000)
+
   it('reads a monument in French: its French name, and English where the French row has no description', async () => {
     const [items] = await loadEntities(['items'])
     const toledo = await collection('mwnf3_explore:location:337')
