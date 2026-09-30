@@ -171,6 +171,28 @@ describe('website smoke test', () => {
     app.unmount()
   }, 60000)
 
+  it('renders a monument led by a Sharing History record: named Virtual Museum there, by its project below', async () => {
+    const [items] = await loadEntities(['items'])
+    const location = await collection('mwnf3_explore:location:223')
+    // Monument 1747 stands for seven Sharing History records and nothing
+    // else: legacy shows the first by number as "Virtual Museum", and the
+    // others as related content under a word its dictionary lacks.
+    const record = items.find((i) => i.backward_compatibility === 'mwnf3_sharing_history:sh_monuments:awe:tr:10')
+    const { app, host } = await mountOn(`#/monument/${record.id}?location=${location.id}`, '.explore-monument__name')
+
+    const [label, project] = host.querySelector('.explore-monument__source').textContent.split(' — ')
+    expect(label).toBe('Virtual Museum')
+    expect(project).toBeTruthy()
+    const tabs = texts(host, '.explore-tabs__tab')
+    host.querySelectorAll('.explore-tabs__tab')[tabs.indexOf('Related Content')].click()
+    await vi.waitFor(() => expect(host.querySelector('.explore-related')).not.toBeNull())
+    const related = texts(host, '.explore-related .explore-monument__source')
+    expect(related).toHaveLength(6)
+    expect(new Set(related)).toEqual(new Set([project]))
+
+    app.unmount()
+  }, 60000)
+
   it("renders a monument by Explore's own text where it has a description, its record as related content", async () => {
     const [items] = await loadEntities(['items'])
     const lamego = await collection('mwnf3_explore:location:108')
