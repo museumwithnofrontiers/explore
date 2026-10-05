@@ -18,6 +18,8 @@
   --explore-green: #006950;
   --explore-navy: #123260;
   --mwnf-color-accent: #006950;
+  /* The shared components' links, in the green they have always had here. */
+  --mwnf-link-text: #006950;
   --mwnf-color-muted: #555555;
   --mwnf-color-border: #dddddd;
   --mwnf-content-width: 76rem;
