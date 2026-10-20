@@ -24,7 +24,7 @@
 .mwnf-header__logos { order: -1; }
 .mwnf-header__logo-list { margin: 0; padding: 0; list-style: none; }
 .mwnf-header__logo img { display: block; width: 125px; height: 50px; }
-.explore-logo { display: block; width: auto; height: 50px; }
+.mwnf-header__brand-logo { display: block; width: auto; height: 50px; }
 .mwnf-header__tools { flex-direction: row; align-items: center; gap: 30px; }
 .mwnf-header__links { gap: 30px; font-size: 20px; line-height: 25px; }
 .mwnf-header__links li + li::before { content: none; }
@@ -82,7 +82,7 @@
   :root { --mwnf-content-padding: 16px; }
   .mwnf-header__links { font-size: 16px; line-height: 18px; }
   .mwnf-header__logo img,
-  .explore-logo { width: auto; height: 35px; }
+  .mwnf-header__brand-logo { width: auto; height: 35px; }
   .mwnf-banner--strip .mwnf-banner__title { line-height: 40px; }
   .mwnf-banner__subtitle { font-size: 18px; line-height: 23px; }
 }

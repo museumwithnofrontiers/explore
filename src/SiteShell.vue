@@ -7,20 +7,22 @@
 // drifts from the platform the next time SiteShell gains a feature.
 //
 // What is this website's own is legacy's chrome (explore-client App.vue):
-// the header's two logos — MWNF's, linking to its portal, then Explore's,
-// linking home — the language switcher beside the header's links, and the
-// footer with the language policy.
+// MWNF's logo, linking to its portal, before Explore's (the config's
+// `brand`, linking home); the language switcher beside the header's links;
+// and the footer with the language policy.
 import { computed } from 'vue'
 import { useI18n, useSiteConfig } from '@museumwnf/viewer-core'
+import { chromeAsset } from '@museumwnf/viewer-layout'
 import { SiteShell } from '@museumwnf/viewer-layout/components'
 import ExploreFooter from './components/ExploreFooter.vue'
-import mwnfLogo from '../theme/assets/logo.jpg'
-import exploreLogo from '../theme/assets/explorelogo_wide.png'
+import { chrome } from './composables/chrome.js'
 
 const { t } = useI18n()
 const { links } = useSiteConfig()
 
-const logos = computed(() => [{ image: mwnfLogo, alt: t('explore.identity.organisation'), href: links.portal }])
+const logos = computed(() => [
+  { image: chromeAsset(chrome, 'logo.jpg'), alt: t('explore.identity.organisation'), href: links.portal },
+])
 </script>
 
 <template>
@@ -31,9 +33,6 @@ const logos = computed(() => [{ image: mwnfLogo, alt: t('explore.identity.organi
     language-placement="header"
     language-style="select"
   >
-    <template #brand>
-      <img class="explore-logo" :src="exploreLogo" :alt="t('explore.identity.title')" />
-    </template>
     <slot />
     <template #footer>
       <ExploreFooter />

@@ -52,14 +52,14 @@ describe('website smoke test', () => {
     expect(host.querySelectorAll('.explore-itinerary-panel')).toHaveLength(4)
     // The home banner, one of legacy's, from this repository.
     const banner = host.querySelector('.mwnf-banner__image').getAttribute('src')
-    expect(banner).toMatch(/\/assets\/banners\/\d+\.jpg$/)
+    expect(banner).toMatch(/\/theme\/assets\/chrome\/explore\/banners\/homebanners\/\d+\.jpg$/)
     expect(banner).not.toContain('museumwnf.org')
     expect(host.querySelector('.mwnf-banner__title').textContent.trim()).toBe('Explore')
     // The two partnerships legacy shows on its home page, with their logos.
     expect(texts(host, '.explore-partnerships__title')).toEqual(['Barakat', 'European Union'])
     expect([...host.querySelectorAll('.explore-partnerships__logo')].map((img) => img.getAttribute('src'))).toEqual([
-      expect.stringMatching(/\/assets\/partnerships\/8\.jpg$/),
-      expect.stringMatching(/\/assets\/partnerships\/10\.jpg$/),
+      expect.stringMatching(/\/theme\/assets\/chrome\/explore\/partners\/8\/8\.jpg$/),
+      expect.stringMatching(/\/theme\/assets\/chrome\/explore\/partners\/10\/10\.jpg$/),
     ])
 
     app.unmount()

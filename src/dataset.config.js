@@ -10,7 +10,7 @@ import MonumentPage from './views/MonumentPage.vue'
 import PlacePage from './views/PlacePage.vue'
 import SubItineraryPage from './views/SubItineraryPage.vue'
 import ThemePage from './views/ThemePage.vue'
-import { bannerImage } from './composables/chrome.js'
+import { bannerImage, chrome } from './composables/chrome.js'
 import { banner, exploreCollection, resolveLegacyPath, title } from './composables/explore.js'
 
 // The whole declaration of Explore with MWNF. Before it mounts, the website
@@ -101,6 +101,11 @@ export default {
       }
     },
   },
+
+  // The site's own chrome files (composables/chrome.js); the header mark is
+  // legacy's Explore logo, linking home.
+  chrome,
+  brand: { logo: 'explorelogo_wide.png', alt: 'explore.identity.title' },
 
   // Where the travel records' pictures live: the legacy media server, which
   // the package's paths point into. The chrome's pictures are this
