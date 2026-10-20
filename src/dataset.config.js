@@ -1,5 +1,5 @@
 import {
-  languageLabels, mediaUrl, mwnfLinks, offeredLanguages, sectionMeta, useDataPackage,
+  languageLabels, mwnfLinks, offeredLanguages, sectionMeta, useDataPackage,
 } from '@museumwnf/viewer-core'
 import { TextPageView } from '@museumwnf/viewer-layout/views'
 import SiteShell from './SiteShell.vue'
@@ -10,6 +10,7 @@ import MonumentPage from './views/MonumentPage.vue'
 import PlacePage from './views/PlacePage.vue'
 import SubItineraryPage from './views/SubItineraryPage.vue'
 import ThemePage from './views/ThemePage.vue'
+import { bannerImage } from './composables/chrome.js'
 import { banner, exploreCollection, resolveLegacyPath, title } from './composables/explore.js'
 
 // The whole declaration of Explore with MWNF. Before it mounts, the website
@@ -60,12 +61,12 @@ export default {
 
   shell: SiteShell,
 
-  // The menu is legacy's green bar, the ways into the site; the header's
-  // links are legacy's own pages; the footer's, MWNF's.
+  // The menu is legacy's green bar, the three ways into the site; the
+  // header's links are legacy's own pages. The footer is legacy's, the
+  // website's own (components/ExploreFooter.vue).
   navigation: {
     languages: languageLabels(languages),
     links: [
-      { section: 'home', label: 'core.nav.home', to: { name: 'home' } },
       { section: 'themes', label: 'explore.nav.byTheme', to: { name: 'home', hash: '#explore-by-theme' } },
       { section: 'countries', label: 'explore.nav.byCountry', to: { name: 'home', hash: '#explore-by-country' } },
       {
@@ -80,24 +81,15 @@ export default {
       { label: 'core.nav.credits', to: { name: 'credits' } },
       { label: 'explore.nav.getInvolved', to: { name: 'get-involved' } },
     ],
-    footerLinks: [
-      { label: 'explore.nav.mwnfPortal', href: mwnfLinks.portal, external: true },
-      { label: 'core.footer.aboutMwnf', href: mwnfLinks.about, external: true },
-      { label: 'core.footer.contact', href: mwnfLinks.contact, external: true },
-      { label: 'explore.nav.importantInformation', to: { name: 'important-information' } },
-      { label: 'core.footer.legalNotice', href: mwnfLinks.legalNotice, external: true },
-      { label: 'core.footer.credits', href: mwnfLinks.credits, external: true },
-      { label: 'core.footer.cookies', href: mwnfLinks.cookies, external: true },
-    ],
   },
 
   // Legacy's banner, on every page: one of the home banners drawn per visit,
-  // the site's name and its leitmotif over it, and what it shows as its
-  // caption.
+  // from this repository's copies (composables/chrome.js), "Explore" and the
+  // leitmotif over it, and what it shows as its caption.
   banner: {
     variant: 'strip',
-    image: () => mediaUrl(banner.value?.image) ?? '',
-    title: () => siteName,
+    image: () => bannerImage(banner.value?.image) ?? '',
+    title: 'explore.banner.title',
     subtitle: 'explore.home.leitmotif',
     caption: ({ locale }) => {
       const shown = banner.value
@@ -110,8 +102,9 @@ export default {
     },
   },
 
-  // Where the site records' pictures live: the legacy media server, which the
-  // package's paths point into.
+  // Where the travel records' pictures live: the legacy media server, which
+  // the package's paths point into. The chrome's pictures are this
+  // repository's own (composables/chrome.js).
   media: {
     legacyHost: 'https://images.museumwnf.org',
   },

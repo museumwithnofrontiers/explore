@@ -447,6 +447,15 @@ export function themePictures(theme) {
   return (theme?.images ?? []).filter((i) => !/ country picture$/.test(i.alt_text ?? ''))
 }
 
+/**
+ * Whether legacy marks a theme "NEW": its API's `newStatus`, true for a
+ * thematic cycle whose status is 'e' (explore-api ThemeResource). The status
+ * travels on the theme's English row, `extra.legacy_status`.
+ */
+export function isNewTheme(theme) {
+  return text('collections', theme.id, 'en').extra?.legacy_status === 'e'
+}
+
 // ── Itineraries ──────────────────────────────────────────────────────────
 //
 // Under the itineraries root: the thematic itineraries (legacy's kind 4),

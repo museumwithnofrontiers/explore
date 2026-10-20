@@ -1,0 +1,51 @@
+<script setup>
+import { computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { mwnfLinks, useI18n, useSiteRights } from '@museumwnf/viewer-core'
+
+// Legacy's footer (explore-client App.vue): MWNF's links and this site's, in
+// its order, the language policy and the copyright line, then the rights
+// holder's attribution the platform adds to every site. MWNF's pages open in
+// a new tab, as legacy's did.
+const { t } = useI18n()
+const router = useRouter()
+const rights = useSiteRights()
+
+const site = (to) => ({ href: router.resolve(to).href, external: false })
+const mwnf = (href) => ({ href, external: true })
+
+const links = computed(() => [
+  { label: t('explore.footer.mwnfHome'), ...mwnf(mwnfLinks.portal) },
+  { label: t('core.nav.home'), ...site({ name: 'home' }) },
+  { label: t('core.nav.about'), ...mwnf(mwnfLinks.about) },
+  { label: t('explore.footer.getInvolved'), ...site({ name: 'get-involved' }) },
+  { label: t('core.footer.contact'), ...mwnf(mwnfLinks.contact) },
+  { label: t('core.footer.legalNotice'), ...mwnf(mwnfLinks.legalNotice) },
+  { label: t('core.footer.credits'), ...mwnf(mwnfLinks.credits) },
+  { label: t('core.footer.cookies'), ...mwnf(mwnfLinks.cookies) },
+])
+// Legacy's line: its copyright sign, then the text, then the year.
+const copyright = computed(() => `© ${t('explore.footer.copyright')}${new Date().getFullYear()}`)
+</script>
+
+<template>
+  <div class="explore-footer">
+    <ul class="explore-footer__links">
+      <li v-for="link in links" :key="link.label">
+        <a
+          class="explore-footer__link"
+          :href="link.href"
+          :target="link.external ? '_blank' : undefined"
+          :rel="link.external ? 'noopener' : undefined"
+        >{{ link.label }}</a>
+      </li>
+    </ul>
+    <p class="explore-footer__policy">{{ t('explore.footer.languagePolicy') }}</p>
+    <p class="explore-footer__copyright">{{ copyright }}</p>
+    <p v-if="rights.holder" class="explore-footer__attribution">
+      <span class="explore-footer__attribution-label">{{ t('record.source.rightsHolder') }}</span>
+      {{ rights.attribution ?? rights.holder }}
+      <a v-if="rights.termsUrl" class="explore-footer__link" :href="rights.termsUrl">{{ t('record.source.termsOfUse') }}</a>
+    </p>
+  </div>
+</template>

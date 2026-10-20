@@ -6,6 +6,7 @@ import {
 import { catalogues as sharedTexts } from '@museumwnf/viewer-i18n/standalone'
 import ownTexts from '../locales/en.json'
 import config from '../src/dataset.config.js'
+import { bannerImage, partnershipLogo } from '../src/composables/chrome.js'
 
 // The same two layers main.js assembles, in the same order: the shared bundle
 // first, this website's own file last. Mounting without them would prove
@@ -31,10 +32,10 @@ const texts = (host, selector) => [...host.querySelectorAll(selector)].map((node
 
 describe('website smoke test', () => {
   it('mounts the home page: the themes in legacy order, two highlighted, the countries', async () => {
-    const { app, host } = await mountOn('#/', '.explore-themes__card')
+    const { app, host } = await mountOn('#/', '.explore-theme-panel')
 
     expect(host.querySelector('.mwnf-page')).not.toBeNull()
-    expect(texts(host, '.explore-themes__name')).toEqual([
+    expect(texts(host, '.explore-theme-panel__name')).toEqual([
       "Explore Palestine's Islamic Art and Architecture",
       'Explore the Islamic Heritage of the Mediterranean',
       'Explore Portugal',
@@ -42,17 +43,57 @@ describe('website smoke test', () => {
       'Explore Tyrol',
       'Explore Ariccia',
     ])
-    expect(host.querySelectorAll('.explore-highlighted__card')).toHaveLength(2)
-    expect(host.querySelectorAll('#explore-by-country .explore-tiles__tile')).toHaveLength(23)
-    // The home banner, one of legacy's, from its media server.
-    expect(host.querySelector('.mwnf-banner__image').getAttribute('src')).toMatch(
-      /^https:\/\/images\.museumwnf\.org\/hi_res\/explore\/banners\//,
-    )
-    // The two partnerships legacy shows on its home page.
+    // Legacy marks every live theme "NEW" (its status 'e').
+    expect(texts(host, '.explore-theme-panel__new-text')).toEqual(Array(6).fill('NEW'))
+    expect(host.querySelectorAll('.explore-highlighted__panel')).toHaveLength(2)
+    // The countries: on the map and in the list under it, no tiles.
+    expect(host.querySelectorAll('.explore-home__country option:not([disabled])')).toHaveLength(23)
+    expect(host.querySelectorAll('#explore-by-country .explore-tiles__tile')).toHaveLength(0)
+    expect(host.querySelectorAll('.explore-itinerary-panel')).toHaveLength(4)
+    // The home banner, one of legacy's, from this repository.
+    const banner = host.querySelector('.mwnf-banner__image').getAttribute('src')
+    expect(banner).toMatch(/\/assets\/banners\/\d+\.jpg$/)
+    expect(banner).not.toContain('museumwnf.org')
+    expect(host.querySelector('.mwnf-banner__title').textContent.trim()).toBe('Explore')
+    // The two partnerships legacy shows on its home page, with their logos.
     expect(texts(host, '.explore-partnerships__title')).toEqual(['Barakat', 'European Union'])
+    expect([...host.querySelectorAll('.explore-partnerships__logo')].map((img) => img.getAttribute('src'))).toEqual([
+      expect.stringMatching(/\/assets\/partnerships\/8\.jpg$/),
+      expect.stringMatching(/\/assets\/partnerships\/10\.jpg$/),
+    ])
 
     app.unmount()
   }, 60000)
+
+  it("draws legacy's chrome: the two logos, the three ways in, and legacy's footer", async () => {
+    const { app, host } = await mountOn('#/', '.explore-footer')
+
+    // Explore's logo is the header's home link; MWNF's, which the theme draws first, links to its portal.
+    expect(host.querySelector('.mwnf-header__home img').getAttribute('src')).toMatch(/\/theme\/assets\/explorelogo_wide\.png$/)
+    expect(host.querySelector('.mwnf-header__logo img').getAttribute('src')).toMatch(/\/theme\/assets\/logo\.jpg$/)
+    expect(host.querySelector('.mwnf-header__logo').getAttribute('href')).toBe('https://www.museumwnf.org')
+    expect(texts(host, '.mwnf-nav__link')).toEqual(['Explore by Theme', 'Explore by Country', 'Explore by Itinerary'])
+    expect(texts(host, '.explore-footer__links .explore-footer__link')).toEqual([
+      'MWNF Home', 'Home', 'About', 'Get involved', 'Contact', 'Important Legal Notice', 'Credits', 'Cookies',
+    ])
+    expect(host.querySelector('.explore-footer__policy').textContent).toMatch(/^Language policy: /)
+    expect(host.querySelector('.explore-footer__copyright').textContent.trim()).toBe(
+      `© Museum With No Frontiers (MWNF), 2004—${new Date().getFullYear()}`,
+    )
+
+    app.unmount()
+  }, 60000)
+
+  it('finds a picture in this repository for every banner and partnership logo the package names', async () => {
+    const [collections] = await loadEntities(['collections'])
+    const home = collections.find((c) => c.purpose === 'explore-root').extra.explore_home
+
+    expect(home.banners.length).toBeGreaterThan(0)
+    for (const shown of home.banners) expect(bannerImage(shown.image), shown.image).toBeTruthy()
+    for (const partnership of home.featured_partnerships) {
+      expect(partnershipLogo(partnership.logo), partnership.logo).toBeTruthy()
+    }
+  })
 
   it("renders a theme: its introduction, its countries and the travel records scoped to it", async () => {
     const theme = await collection('mwnf3_explore:thematiccycle:1')
@@ -257,12 +298,12 @@ describe('website smoke test', () => {
   // itineraries in 11 countries, their sub-itineraries in order, and each
   // sub-itinerary's locations and monuments in order.
   it('offers the itineraries on the home page: 11 countries, 12 itineraries, 4 drawn', async () => {
-    const { app, host } = await mountOn('#/', '.explore-itinerary-cards__card')
+    const { app, host } = await mountOn('#/', '.explore-itinerary-panel')
     const [countries, itineraries] = host.querySelectorAll('#explore-by-itinerary select')
     // Each select opens on its placeholder.
     expect(countries.options).toHaveLength(12)
     expect(itineraries.options).toHaveLength(13)
-    expect(host.querySelectorAll('.explore-itinerary-cards__card')).toHaveLength(4)
+    expect(host.querySelectorAll('.explore-itinerary-panel')).toHaveLength(4)
     app.unmount()
   }, 60000)
 
@@ -369,8 +410,8 @@ describe('website smoke test', () => {
   // rendered page, not the files.
   it('renders the shared texts and its own over them', async () => {
     const theme = await collection('mwnf3_explore:thematiccycle:1')
-    for (const hash of ['#/', `#/theme/${theme.id}`]) {
-      const { app, host } = await mountOn(hash, '.explore-tiles__tile')
+    for (const [hash, selector] of [['#/', '.explore-theme-panel'], [`#/theme/${theme.id}`, '.explore-tiles__tile']]) {
+      const { app, host } = await mountOn(hash, selector)
       // From viewer-i18n: the layout's skip link.
       expect(host.textContent).toContain('Skip to content')
       expect(checkTextsRendered(host, { namespaces: ['explore', 'core', 'layout', 'record', 'sheet'] })).toEqual([])

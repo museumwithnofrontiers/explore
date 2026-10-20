@@ -1,10 +1,15 @@
 /*
- * The website's visual identity: legacy Explore's green bar and navy
- * headings on a light page. This file belongs to the webdesigner.
+ * The website's visual identity: legacy Explore's (explore-client
+ * src/styles/_variables.scss): the green bar, navy headings and footer, and
+ * Muli, on a white page over a light grey. This file belongs to the
+ * webdesigner.
  *
  * Full token documentation with explanations:
  * node_modules/@museumwnf/viewer-layout/src/tokens.reference.css
  */
+
+/* Legacy's two fonts: Muli (now Mulish) everywhere, Roboto Condensed for the footer's texts. */
+@import url('https://fonts.googleapis.com/css2?family=Mulish:wght@400;700&family=Roboto+Condensed:wght@400;700&display=swap');
 
 :root {
   /* ---------- Global ---------- */
@@ -12,27 +17,33 @@
   --mwnf-font-heading: inherit;
   --mwnf-line-height: 1.6;
   --mwnf-weight-heading: 700;
-  --mwnf-color-text: #1c1c1c;
+  --mwnf-color-text: #4a4a4a;
   --mwnf-color-background: #fbfbfb;
-  /* Legacy Explore's two colours, which the pages in src/views read too. */
+  /* Legacy Explore's colours, which the pages in src/views read too. */
   --explore-green: #006950;
   --explore-navy: #123260;
+  --explore-medium-green: #008061;
+  --explore-grey: #6a6a6a;
+  --explore-light-grey: #e2e2e2;
+  --explore-red: #e54c4c;
   --mwnf-color-accent: #006950;
   /* The shared components' links, in the green they have always had here. */
   --mwnf-link-text: #006950;
   --mwnf-color-muted: #555555;
-  --mwnf-color-border: #dddddd;
-  --mwnf-content-width: 76rem;
-  --mwnf-content-padding: 1rem;
+  --mwnf-color-border: #e2e2e2;
+  /* Legacy's page is one 1350-pixel column (theme/overrides.css); its
+     sections fill it, 40 pixels in from each side. */
+  --mwnf-content-width: 100%;
+  --mwnf-content-padding: 40px;
   --mwnf-space: 0.75rem;
   --mwnf-radius: 0.25rem;
-  --mwnf-section-border: 1px solid #dddddd;
+  --mwnf-section-border: 1px solid #e2e2e2;
   --mwnf-section-title-size: 1rem;
 
   /* ---------- Header ---------- */
-  --mwnf-header-padding: 1.25rem;
-  --mwnf-header-background: transparent;
-  --mwnf-header-text: inherit;
+  --mwnf-header-padding: 15px;
+  --mwnf-header-background: #ffffff;
+  --mwnf-header-text: #123260;
   --mwnf-header-title-size: 1.75rem;
   --mwnf-header-subtitle-size: 1rem;
   --mwnf-header-subtitle-color: #555555;
@@ -42,16 +53,26 @@
   --mwnf-banner-background: transparent;
   --mwnf-banner-text-color: #ffffff;
   --mwnf-banner-text-size: 1.25rem;
-  --mwnf-banner-max-height: 22rem;
+  --mwnf-banner-max-height: 200px;
+  --mwnf-banner-strip-height: 200px;
+  --mwnf-banner-strip-padding: 30px;
+  --mwnf-banner-strip-title-size: 48px;
+  --mwnf-banner-strip-title-size-narrow: 32px;
+  --mwnf-banner-overlay-shadow: -1px 1px 1px #4a4a4a;
+  --mwnf-banner-caption-size: 11px;
+  --mwnf-banner-caption-margin: 0;
+  --mwnf-banner-caption-padding: 0 0.25rem;
+  --mwnf-banner-caption-background: transparent;
+  --mwnf-banner-caption-width: none;
 
   /* ---------- Navigation ---------- */
-  --mwnf-nav-padding: 0.5rem;
+  --mwnf-nav-padding: 0;
   --mwnf-nav-background: #006950;
   --mwnf-nav-border: 0;
-  --mwnf-nav-gap: 1rem;
+  --mwnf-nav-gap: 0;
   --mwnf-nav-link-color: #ffffff;
   --mwnf-nav-link-active-color: #ffffff;
-  --mwnf-nav-link-weight: 500;
+  --mwnf-nav-link-weight: 400;
 
   /* ---------- Content ---------- */
   --mwnf-content-padding-block: 1.5rem;
@@ -69,10 +90,10 @@
   --mwnf-sponsors-logo-height: 2.5rem;
 
   /* ---------- Footer ---------- */
-  --mwnf-footer-padding: 1.25rem;
-  --mwnf-footer-background: #f0f0f0;
-  --mwnf-footer-text-color: #555555;
-  --mwnf-footer-text-size: 0.875rem;
+  --mwnf-footer-padding: 60px;
+  --mwnf-footer-background: #123260;
+  --mwnf-footer-text-color: #ffffff;
+  --mwnf-footer-text-size: 16px;
 
   /* ---------- Shared views (@museumwnf/viewer-core) ----------
    * The page shell already centers and pads the content section, so the
