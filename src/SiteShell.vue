@@ -6,53 +6,36 @@
 // belongs to the shared component, once, and a website that duplicates it
 // drifts from the platform the next time SiteShell gains a feature.
 //
-// The one thing SiteShell cannot know is the header lockup: it is a text, and
-// a text is only available inside the application. `#brand` is the slot it
-// reserves for exactly that.
-//
-// The footer credits the organisation as legacy's does ("© <mwnf>"): one
-// dictionary word for both the organisation and the copyright holder.
-import { useI18n } from '@museumwnf/viewer-core'
+// What is this website's own is legacy's chrome (explore-client App.vue):
+// MWNF's logo, linking to its portal, before Explore's (the config's
+// `brand`, linking home); the language switcher beside the header's links;
+// and the footer with the language policy.
+import { computed } from 'vue'
+import { useI18n, useSiteConfig } from '@museumwnf/viewer-core'
+import { chromeAsset } from '@museumwnf/viewer-layout'
 import { SiteShell } from '@museumwnf/viewer-layout/components'
+import ExploreFooter from './components/ExploreFooter.vue'
+import { chrome } from './composables/chrome.js'
 
 const { t } = useI18n()
+const { links } = useSiteConfig()
+
+const logos = computed(() => [
+  { image: chromeAsset(chrome, 'logo.jpg'), alt: t('explore.identity.organisation'), href: links.portal },
+])
 </script>
 
 <template>
   <SiteShell
     v-bind="$attrs"
     header-home="#/"
-    :footer-text="`© ${t('explore.identity.organisation')}`"
+    :header-logos="logos"
+    language-placement="header"
+    language-style="select"
   >
-    <template #brand>
-      <span class="site-logo">
-        <span class="site-logo-org">{{ t('explore.identity.organisation') }}</span>
-        <span class="site-logo-title">{{ t('explore.identity.title') }}</span>
-      </span>
-    </template>
     <slot />
+    <template #footer>
+      <ExploreFooter />
+    </template>
   </SiteShell>
 </template>
-
-<style scoped>
-/* The lockup only. Colours and fonts come from theme/tokens.css, which is
-   where this website's identity is set. */
-.site-logo {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  color: var(--mwnf-header-text);
-}
-.site-logo-org {
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  opacity: 0.8;
-}
-.site-logo-title {
-  font-size: 28px;
-  font-weight: 400;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-}
-</style>

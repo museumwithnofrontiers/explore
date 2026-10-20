@@ -1,1 +1,123 @@
-/* Escape hatch for styling beyond tokens.css — keep it empty until a need cannot be expressed with a token. */
+/*
+ * Legacy Explore's chrome (explore-client App.vue, BannerComponent.vue,
+ * NavigationMenu.vue) where no token reaches: the page as one white column,
+ * the header's two logos, the banner across the column, the menu's three
+ * equal cells and the footer's layout.
+ */
+
+/* The page: one 1350-pixel white column on the light grey. */
+.mwnf-page {
+  max-width: 1350px;
+  margin: 0 auto;
+  background-color: #ffffff;
+  box-shadow: 0 2px 8px 2px var(--explore-light-grey);
+}
+
+/* Header: MWNF's logo, then Explore's, both 50 pixels tall; legacy's links on the right. */
+.mwnf-header {
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 2px 8px var(--explore-light-grey);
+}
+.mwnf-header__inner { justify-content: space-between; }
+.mwnf-header__brand { gap: 20px; }
+.mwnf-header__logos { order: -1; }
+.mwnf-header__logo-list { margin: 0; padding: 0; list-style: none; }
+.mwnf-header__logo img { display: block; width: 125px; height: 50px; }
+.mwnf-header__brand-logo { display: block; width: auto; height: 50px; }
+.mwnf-header__tools { flex-direction: row; align-items: center; gap: 30px; }
+.mwnf-header__links { gap: 30px; font-size: 20px; line-height: 25px; }
+.mwnf-header__links li + li::before { content: none; }
+.mwnf-header__link { color: var(--explore-navy); }
+
+/* Banner: across the column, 200 pixels, its picture dimmed under the white texts. */
+.mwnf-banner { padding-inline: 0; }
+.mwnf-banner--strip .mwnf-banner__media::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-color: rgb(74 74 74 / 30%);
+}
+.mwnf-banner--strip .mwnf-banner__body { z-index: 1; }
+.mwnf-banner--strip .mwnf-banner__title { margin-bottom: 20px; line-height: 60px; }
+.mwnf-banner__subtitle { width: 100%; font-size: 28px; line-height: 35px; font-weight: 400; }
+.mwnf-banner--strip .mwnf-banner__caption { z-index: 1; visibility: visible; font-style: normal; text-shadow: -1px 1px 1px #4a4a4a; }
+
+/* Menu: the three ways in, side by side in equal cells, stacked on a narrower screen. */
+.mwnf-nav { padding-inline: 0; }
+.mwnf-nav__toggle { display: none; }
+.mwnf-nav__links { display: flex; flex: 1; flex-wrap: nowrap; }
+.mwnf-nav__links > li { flex: 1; border-inline: 1px solid var(--explore-medium-green); }
+.mwnf-nav__links > li:first-child { border-inline-start: 0; }
+.mwnf-nav__links > li:last-child { border-inline-end: 0; }
+.mwnf-nav__link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 50px;
+  font-size: 20px;
+  line-height: 25px;
+}
+.mwnf-nav__link--active { text-decoration: none; }
+
+@media (max-width: 1199px) {
+  .mwnf-banner__subtitle { font-size: 20px; line-height: 25px; }
+  .mwnf-nav__links { flex-direction: column; }
+  .mwnf-nav__links > li { border-inline: 0; border-block: 1px solid var(--explore-medium-green); }
+  .mwnf-nav__links > li:first-child { border-block-start: 0; }
+  .mwnf-nav__links > li:last-child { border-block-end: 0; }
+}
+
+@media (max-width: 949px) {
+  .mwnf-header__tools { flex-wrap: wrap; gap: 10px 20px; }
+  .mwnf-header__links { flex-direction: row; flex-wrap: wrap; gap: 5px 20px; font-size: 18px; line-height: 23px; }
+}
+
+@media (max-width: 48rem) {
+  .mwnf-nav__toggle { display: none; }
+  .mwnf-nav__links { display: flex; }
+}
+
+@media (max-width: 499px) {
+  :root { --mwnf-content-padding: 16px; }
+  .mwnf-header__links { font-size: 16px; line-height: 18px; }
+  .mwnf-header__logo img,
+  .mwnf-header__brand-logo { width: auto; height: 35px; }
+  .mwnf-banner--strip .mwnf-banner__title { line-height: 40px; }
+  .mwnf-banner__subtitle { font-size: 18px; line-height: 23px; }
+}
+
+/* Footer: the links, the language policy and the copyright line, in Roboto
+   Condensed on navy; "Follow us" and the social icons beside them, above them
+   on a narrower screen. */
+.mwnf-footer { margin-top: 100px; padding-inline: 60px; border-top: 0; }
+.explore-footer { display: flex; justify-content: space-between; width: 100%; font-family: 'Roboto Condensed', var(--mwnf-font-body); }
+.explore-footer__main { margin-right: 200px; }
+.explore-footer__social { display: flex; flex-direction: column; margin-right: 10px; }
+.explore-footer__follow { margin: 0 0 10px; line-height: 18px; }
+.explore-footer .mwnf-footer__social { display: grid; grid-template-columns: repeat(6, 32px); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.explore-footer .mwnf-footer__social-link { display: block; color: #ffffff; }
+.explore-footer .mwnf-footer__social-icon { display: block; width: 30px; height: 30px; }
+
+@media (max-width: 1199px) {
+  .explore-footer { flex-direction: column-reverse; }
+  .explore-footer__main { margin-right: 0; }
+  .explore-footer__social { flex-direction: row; align-items: center; margin: 0 0 20px; }
+  .explore-footer__follow { margin: 0 20px 0 0; }
+}
+
+@media (max-width: 499px) {
+  .explore-footer__follow { display: none; }
+  .explore-footer .mwnf-footer__social { grid-template-columns: repeat(6, 24px); }
+  .explore-footer .mwnf-footer__social-icon { width: 22px; height: 22px; }
+}
+.explore-footer__links { display: flex; flex-wrap: wrap; gap: 0 30px; margin: 0; padding: 0; list-style: none; line-height: 18px; }
+.explore-footer__links li { margin-top: 10px; }
+.explore-footer__link { color: #ffffff; text-decoration: none; }
+.explore-footer__link:hover { text-decoration: underline; }
+.explore-footer__policy { margin: 30px 0 20px; font-size: 14px; line-height: 16px; }
+.explore-footer__copyright { margin: 0; font-size: 14px; line-height: 16px; }
+
+@media (max-width: 949px) {
+  .mwnf-footer { padding: 40px; }
+}

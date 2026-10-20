@@ -23,49 +23,264 @@
 .explore-button:hover,
 .explore-button:focus-visible { background: var(--explore-navy); }
 
-/* ── Home ───────────────────────────────────────────────────────────────── */
+/* ── Home (explore-client HomePage.vue, ExploreTheme.vue, ExploreCountry.vue,
+   ExploreItinerary.vue) ─────────────────────────────────────────────────── */
 
-.explore-home__description { font-size: 1.125rem; margin-bottom: calc(var(--mwnf-space) * 2); }
-.explore-home__section { margin: calc(var(--mwnf-space) * 3) 0; scroll-margin-top: var(--mwnf-space); }
+.explore-home { margin-inline: calc(var(--mwnf-content-padding) * -1); }
+.explore-home__description { padding: 40px; font-size: 20px; line-height: 25px; color: var(--explore-grey); }
+.explore-home__description a { color: var(--explore-grey); text-decoration: underline; }
+.explore-home__section { padding: 0 40px; scroll-margin-top: var(--mwnf-space); }
+.explore-home__section + .explore-home__section { margin-top: 50px; }
 .explore-home__heading,
 .explore-home__subheading,
 .explore-page__title,
 .explore-tiles__heading,
 .explore-travel__heading,
 .explore-background__heading { color: var(--explore-navy); font-weight: 400; }
-.explore-home__heading { font-size: 1.75rem; margin: 0 0 var(--mwnf-space); }
-.explore-home__subheading { font-size: 1.375rem; margin: calc(var(--mwnf-space) * 2) 0 var(--mwnf-space); }
-.explore-home__select { max-width: 24rem; margin-bottom: var(--mwnf-space); }
+.explore-home__heading { margin: 0 0 30px; font-size: 48px; line-height: 60px; font-weight: 700; }
+.explore-home__intro { margin: 0 0 22px; font-size: 20px; line-height: 25px; color: var(--explore-grey); }
+.explore-home__subheading { margin: 0 0 20px; font-size: 32px; line-height: 40px; font-weight: 700; }
+.explore-home__select { flex: 1; margin: 0; }
 
-.explore-themes {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
-  gap: var(--mwnf-space);
-  list-style: none;
-  margin: 0;
-  padding: 0;
+/* A row of tall picture panels, scrolled sideways (components/ExplorePanels.vue). */
+.explore-panels { position: relative; margin-bottom: 30px; }
+.explore-panels__row {
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
-.explore-themes__card { display: flex; flex-direction: column; background: #ffffff; border: 1px solid var(--mwnf-color-border); }
-.explore-themes__image { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
-.explore-themes__body { display: flex; flex: 1; flex-direction: column; gap: 0.5rem; padding: var(--mwnf-space); }
-.explore-themes__name { margin: 0; color: var(--explore-navy); font-size: 1.125rem; }
-.explore-themes__description { flex: 1; margin: 0; color: var(--mwnf-color-muted); }
-.explore-themes__body .explore-button { align-self: flex-start; }
+.explore-panels__row::-webkit-scrollbar { width: 0; height: 0; }
+.explore-panels__arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  width: 50px;
+  height: 50px;
+  margin: -25px 10px 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background-color: rgb(255 255 255 / 60%);
+  cursor: pointer;
+}
+.explore-panels__arrow::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  border: solid #4a4a4a;
+  border-width: 0 0 4px 4px;
+}
+.explore-panels__arrow--previous { left: 0; }
+.explore-panels__arrow--previous::before { transform: translate(-30%, -50%) rotate(45deg); }
+.explore-panels__arrow--next { right: 0; }
+.explore-panels__arrow--next::before { transform: translate(-70%, -50%) rotate(-135deg); }
 
-.explore-highlighted {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
-  gap: var(--mwnf-space);
-  list-style: none;
-  margin: 0;
-  padding: 0;
+/* A theme's panel: its picture behind its name and description, "NEW" in a red corner, the button below. */
+.explore-theme-panel {
+  position: relative;
+  display: flex;
+  flex: 0 0 calc(25% - 15px);
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  height: 600px;
+  padding: 100px 20px;
+  overflow: hidden;
+  color: #ffffff;
+  text-align: center;
+  isolation: isolate;
 }
-.explore-highlighted__link { position: relative; display: block; color: #ffffff; text-decoration: none; }
-.explore-highlighted__image { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
-.explore-highlighted__name,
-.explore-highlighted__description { position: absolute; left: 0; right: 0; padding: 0 var(--mwnf-space); background: rgb(0 0 0 / 55%); }
-.explore-highlighted__name { bottom: 2.5rem; padding-top: 0.5rem; font-size: 1.25rem; }
-.explore-highlighted__description { bottom: 0; height: 2.5rem; overflow: hidden; }
+.explore-theme-panel__image,
+.explore-highlighted__image,
+.explore-itinerary-panel__image {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-color: var(--explore-green);
+  background-position: center;
+  background-size: cover;
+  transition: transform 0.25s;
+}
+.explore-theme-panel__image::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-color: rgb(74 74 74 / 45%);
+}
+.explore-theme-panel:hover .explore-theme-panel__image,
+.explore-highlighted__panel:hover .explore-highlighted__image,
+.explore-itinerary-panel:hover .explore-itinerary-panel__image { transform: scale(1.2); }
+.explore-theme-panel__new {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100px;
+  height: 100px;
+  background: linear-gradient(to bottom left, var(--explore-red) 50%, transparent 50%);
+}
+.explore-theme-panel__new-text {
+  position: absolute;
+  top: 22px;
+  right: 6px;
+  color: #ffffff;
+  font-size: 18px;
+  line-height: 23px;
+  font-weight: 700;
+  transform: rotate(45deg);
+}
+.explore-theme-panel__text { width: 100%; }
+.explore-theme-panel__name { min-height: 140px; margin: 0; font-size: 28px; line-height: 35px; font-weight: 700; }
+.explore-theme-panel__description { margin: 0; font-size: 18px; line-height: 23px; }
+.explore-theme-panel__button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 200px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background-color: var(--explore-green);
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+/* The two highlighted themes: wide panels, their name and description on a band at the foot. */
+.explore-highlighted { display: flex; gap: 20px; margin-bottom: 40px; }
+.explore-highlighted__panel {
+  position: relative;
+  display: flex;
+  flex: 1;
+  align-items: flex-end;
+  height: 400px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px 2px var(--explore-light-grey);
+  color: #ffffff;
+  text-decoration: none;
+  isolation: isolate;
+}
+.explore-highlighted__info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+  height: 125px;
+  padding: 20px 30px;
+  background-color: rgb(74 74 74 / 50%);
+}
+.explore-highlighted__name { margin-bottom: 15px; font-size: 20px; line-height: 25px; font-weight: 700; }
+.explore-highlighted__description { font-family: 'Roboto Condensed', var(--mwnf-font-body); font-size: 14px; line-height: 16px; }
+
+/* The country map, framed, with the list of countries under it. */
+.explore-home__map {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 30px;
+  padding: 30px;
+  border: 1px solid var(--explore-light-grey);
+  box-shadow: 0 2px 8px 2px var(--explore-light-grey);
+}
+.explore-home__map .explore-map { height: 600px; margin: 0; border: 0; }
+.explore-home__country {
+  width: 100%;
+  margin-top: 30px;
+  padding: 8px 15px;
+  border: 1px solid #979797;
+  border-radius: 5px;
+  background-color: #fbfbfb;
+  box-shadow: inset 0 1px 4px rgb(0 0 0 / 25%);
+  font: inherit;
+  font-size: 16px;
+}
+
+/* The itineraries' two lists, in a shadowed band, and four itineraries in tall panels. */
+.explore-home__selects {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 30px;
+  padding: 20px 30px;
+  box-shadow: 0 2px 8px var(--explore-light-grey);
+}
+.explore-home__selects .mwnf-facet { display: flex; flex-direction: column; gap: 10px; }
+.explore-home__selects .mwnf-facet__label { color: var(--explore-navy); font-size: 20px; line-height: 25px; }
+.explore-home__selects .mwnf-facet__select { width: 100%; height: 35px; padding-left: 15px; }
+.explore-itinerary-panel {
+  position: relative;
+  flex: 0 0 calc(25% - 15px);
+  height: 600px;
+  overflow: hidden;
+  color: #ffffff;
+  text-align: center;
+  text-decoration: none;
+  isolation: isolate;
+}
+.explore-itinerary-panel__overlay {
+  position: absolute;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 40%;
+  padding: 20px 10px;
+  background-color: rgb(74 74 74 / 50%);
+}
+.explore-itinerary-panel__country { height: 40%; font-size: 28px; line-height: 35px; font-weight: 700; }
+.explore-itinerary-panel__name { height: 60%; font-size: 20px; line-height: 25px; font-weight: 700; }
+
+/* The featured partnerships under the home page: each logo in a tall box, its name below. */
+.explore-home .explore-partnerships--row { justify-content: center; gap: 0; margin: 0; padding: 40px; }
+.explore-home .explore-partnerships--row .explore-partnerships__entry { margin: 0 20px; gap: 5px; }
+.explore-home .explore-partnerships--row .explore-partnerships__logo { width: 85px; height: 125px; max-width: none; max-height: none; object-fit: contain; object-position: bottom; }
+.explore-home .explore-partnerships--row .explore-partnerships__title { font-size: inherit; text-align: center; }
+
+@media (max-width: 1199px) {
+  .explore-home__description,
+  .explore-home__intro { font-size: 18px; line-height: 23px; }
+  .explore-home__heading,
+  .explore-home__subheading { font-size: 28px; line-height: 35px; }
+  .explore-theme-panel,
+  .explore-itinerary-panel { flex-basis: calc(33.3% - 15px); }
+  .explore-theme-panel__name { font-size: 20px; line-height: 25px; }
+  .explore-itinerary-panel__country { font-size: 20px; line-height: 25px; }
+  .explore-itinerary-panel__name { font-weight: 400; }
+}
+
+@media (max-width: 949px) {
+  .explore-theme-panel,
+  .explore-itinerary-panel { flex-basis: calc(50% - 15px); }
+  .explore-highlighted,
+  .explore-home__selects { flex-direction: column; }
+}
+
+@media (max-width: 599px) {
+  .explore-theme-panel,
+  .explore-itinerary-panel { flex-basis: 100%; height: 450px; }
+  .explore-theme-panel { padding: 50px 20px; }
+  .explore-highlighted__panel { height: 325px; }
+  .explore-panels__arrow { width: 40px; height: 40px; margin-top: -20px; }
+}
+
+@media (max-width: 499px) {
+  .explore-home__section { padding: 0 16px; }
+  .explore-home__description { padding: 16px; font-size: 16px; line-height: 18px; }
+  .explore-home__heading,
+  .explore-home__subheading { margin-bottom: 20px; font-size: 20px; line-height: 25px; }
+  .explore-home__intro { font-size: 16px; line-height: 18px; }
+  .explore-home__map { padding: 16px; }
+  .explore-home__map .explore-map { height: 360px; }
+  .explore-theme-panel__new { width: 75px; height: 75px; }
+  .explore-theme-panel__new-text { top: 16px; right: 4px; font-size: 14px; line-height: 16px; }
+  .explore-theme-panel__description { font-size: 16px; line-height: 18px; }
+  .explore-highlighted__panel { height: 275px; }
+  .explore-highlighted__info { height: 90px; padding: 15px 20px; }
+  .explore-highlighted__name { margin-bottom: 0; font-size: 18px; line-height: 23px; }
+  .explore-highlighted__description { display: none; }
+}
 
 /* ── The frame: the selection beside the page ───────────────────────────── */
 
@@ -82,7 +297,6 @@
 
 .explore-partnerships { display: flex; flex-wrap: wrap; gap: var(--mwnf-space); margin-top: var(--mwnf-space); }
 .explore-partnerships--column { flex-direction: column; align-items: center; }
-.explore-partnerships--row { justify-content: center; margin: calc(var(--mwnf-space) * 3) 0; }
 .explore-partnerships__entry { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; color: inherit; text-decoration: none; }
 .explore-partnerships__logo { max-width: 8rem; max-height: 5rem; object-fit: contain; }
 .explore-partnerships__title { font-size: 0.875rem; }
@@ -184,21 +398,6 @@
 
 /* ── Itineraries ────────────────────────────────────────────────────────── */
 
-.explore-home__selects { display: flex; flex-wrap: wrap; gap: var(--mwnf-space); }
-.explore-itinerary-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
-  gap: var(--mwnf-space);
-  margin: var(--mwnf-space) 0 0;
-  padding: 0;
-  list-style: none;
-}
-.explore-itinerary-cards__link { position: relative; display: block; min-height: 10rem; background: var(--explore-green); color: #ffffff; text-decoration: none; }
-.explore-itinerary-cards__image { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
-.explore-itinerary-cards__country,
-.explore-itinerary-cards__name { position: absolute; left: 0; right: 0; padding: 0 var(--mwnf-space); background: rgb(0 0 0 / 55%); }
-.explore-itinerary-cards__country { bottom: 2.5rem; padding-top: 0.5rem; font-size: 0.875rem; text-transform: uppercase; }
-.explore-itinerary-cards__name { bottom: 0; min-height: 2.5rem; padding-bottom: 0.5rem; }
 .explore-itinerary { display: flex; gap: var(--mwnf-space); padding: var(--mwnf-space) 0; border-top: var(--mwnf-section-border); }
 .explore-itinerary__image { flex: 0 0 12rem; width: 12rem; height: 8rem; object-fit: cover; }
 .explore-itinerary__body { flex: 1; min-width: 0; }

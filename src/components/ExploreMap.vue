@@ -4,11 +4,13 @@ import { useRouter } from 'vue-router'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
-// Legacy's map, on OpenStreetMap's tiles through Leaflet (Pascal, 2026-09-28:
-// no Google Maps and no key): a marker for each place or monument the page
-// leads to, the markers standing on one spot sharing one popup of links, the
-// view fitted to them and never closer than the page's own zoom. A pin with
-// no link (a monument's own map) opens nothing.
+// Legacy's map through Leaflet, with no key (Pascal, 2026-10-20): legacy
+// showed every map as Google's "hybrid", satellite imagery with place names
+// over it, and no other view; here Esri World Imagery with Esri's reference
+// labels over it. A marker for each place or monument the page leads to, the
+// markers standing on one spot sharing one popup of links, the view fitted to
+// them and never closer than the page's own zoom. A pin with no link (a
+// monument's own map) opens nothing.
 const props = defineProps({
   /** [{ lat, lng, label, to }] */
   pins: { type: Array, default: () => [] },
@@ -21,9 +23,13 @@ const element = ref(null)
 let map = null
 let markers = null
 
-const TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
-// OpenStreetMap's tile policy asks every map using its tiles to credit it.
-const ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+// Esri's terms ask every map using its tiles to credit it, in these words;
+// Leaflet shows one credit for the two layers, which share it.
+const ESRI_ATTRIBUTION =
+  'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+const IMAGERY = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+const LABELS =
+  'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'
 
 function popup(group) {
   const box = document.createElement('div')
@@ -80,7 +86,8 @@ function draw() {
 onMounted(async () => {
   await nextTick()
   map = L.map(element.value, { scrollWheelZoom: false })
-  L.tileLayer(TILES, { maxZoom: 19, attribution: ATTRIBUTION }).addTo(map)
+  L.tileLayer(IMAGERY, { maxZoom: 19, attribution: ESRI_ATTRIBUTION }).addTo(map)
+  L.tileLayer(LABELS, { maxZoom: 19, attribution: ESRI_ATTRIBUTION }).addTo(map)
   markers = L.layerGroup().addTo(map)
   draw()
 })
