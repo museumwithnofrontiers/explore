@@ -7,7 +7,8 @@ import { recordTexts } from '../composables/explore.js'
 // The featured partnerships (the sponsors), each its logo over its name,
 // linked to its site: in the column beside a page, or in a row on the home
 // page. Which ones a page shows is `partnershipsFor()`'s rule; the logos are
-// this repository's copies of legacy's (composables/chrome.js).
+// this website's own content, legacy's files kept in this repository
+// (composables/chrome.js).
 const props = defineProps({
   partnerships: { type: Array, default: () => [] },
   variant: { type: String, default: 'column' },
@@ -19,7 +20,7 @@ const entries = computed(() =>
     const texts = recordTexts(partnership, locale.value)
     return {
       id: partnership.id,
-      logo: partnershipLogo(partnership.logo),
+      logo: partnershipLogo(partnership.id),
       title: texts.title ?? '',
       name: texts.name ?? texts.title ?? '',
       url: texts.url ?? null,

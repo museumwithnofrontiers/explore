@@ -1,0 +1,10 @@
+{
+  "themes": [
+    { "id": "4ffaf1c7-3772-5188-8aa0-f1135e335440", "legacy": "mwnf3_explore:thematiccycle:11", "name": "Explore Palestine's Islamic Art and Architecture" },
+    { "id": "25508345-c342-5e46-8fee-afd41e6b9dfd", "legacy": "mwnf3_explore:thematiccycle:1", "name": "Explore the Islamic Heritage of the Mediterranean" },
+    { "id": "5a03cfd5-7b41-586e-b2c8-1d86d928cbc2", "legacy": "mwnf3_explore:thematiccycle:2", "name": "Explore Portugal" },
+    { "id": "003d08dc-6215-5320-a8d3-88161baeb779", "legacy": "mwnf3_explore:thematiccycle:3", "name": "Explore Baroque" },
+    { "id": "a2166dd0-3bf9-5488-a7cc-c18f73e2a45b", "legacy": "mwnf3_explore:thematiccycle:8", "name": "Explore Tyrol" },
+    { "id": "cba672ee-4685-57e3-a926-f3cab0c2eeae", "legacy": "mwnf3_explore:thematiccycle:10", "name": "Explore Ariccia" }
+  ]
+}

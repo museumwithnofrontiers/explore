@@ -1,15 +1,14 @@
 <script setup>
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { mwnfLinks, useI18n, useSiteRights } from '@museumwnf/viewer-core'
+import { mwnfLinks, useI18n } from '@museumwnf/viewer-core'
 
-// Legacy's footer (explore-client App.vue): MWNF's links and this site's, in
-// its order, the language policy and the copyright line, then the rights
-// holder's attribution the platform adds to every site. MWNF's pages open in
-// a new tab, as legacy's did.
+// Legacy's footer (explore-client App.vue), and nothing else (Pascal,
+// 2026-10-20: copy legacy): MWNF's links and this site's, in its order, the
+// language policy and the copyright line. MWNF's pages open in a new tab, as
+// legacy's did.
 const { t } = useI18n()
 const router = useRouter()
-const rights = useSiteRights()
 
 const site = (to) => ({ href: router.resolve(to).href, external: false })
 const mwnf = (href) => ({ href, external: true })
@@ -42,10 +41,5 @@ const copyright = computed(() => `© ${t('explore.footer.copyright')}${new Date(
     </ul>
     <p class="explore-footer__policy">{{ t('explore.footer.languagePolicy') }}</p>
     <p class="explore-footer__copyright">{{ copyright }}</p>
-    <p v-if="rights.holder" class="explore-footer__attribution">
-      <span class="explore-footer__attribution-label">{{ t('record.source.rightsHolder') }}</span>
-      {{ rights.attribution ?? rights.holder }}
-      <a v-if="rights.termsUrl" class="explore-footer__link" :href="rights.termsUrl">{{ t('record.source.termsOfUse') }}</a>
-    </p>
   </div>
 </template>

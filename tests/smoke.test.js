@@ -7,6 +7,7 @@ import { catalogues as sharedTexts } from '@museumwnf/viewer-i18n/standalone'
 import ownTexts from '../locales/en.json'
 import config from '../src/dataset.config.js'
 import { bannerImage, partnershipLogo } from '../src/composables/chrome.js'
+import newThemes from '../src/config/new-themes.json'
 
 // The same two layers main.js assembles, in the same order: the shared bundle
 // first, this website's own file last. Mounting without them would prove
@@ -58,8 +59,8 @@ describe('website smoke test', () => {
     // The two partnerships legacy shows on its home page, with their logos.
     expect(texts(host, '.explore-partnerships__title')).toEqual(['Barakat', 'European Union'])
     expect([...host.querySelectorAll('.explore-partnerships__logo')].map((img) => img.getAttribute('src'))).toEqual([
-      expect.stringMatching(/\/theme\/assets\/chrome\/explore\/partners\/8\/8\.jpg$/),
-      expect.stringMatching(/\/theme\/assets\/chrome\/explore\/partners\/10\/10\.jpg$/),
+      expect.stringMatching(/\/src\/assets\/partnerships\/8\.jpg$/),
+      expect.stringMatching(/\/src\/assets\/partnerships\/10\.jpg$/),
     ])
 
     app.unmount()
@@ -80,9 +81,20 @@ describe('website smoke test', () => {
     expect(host.querySelector('.explore-footer__copyright').textContent.trim()).toBe(
       `© Museum With No Frontiers (MWNF), 2004—${new Date().getFullYear()}`,
     )
+    // Legacy's footer has no rights-holder line.
+    expect(host.querySelector('.mwnf-footer').textContent).not.toContain('Rights holder')
 
     app.unmount()
   }, 60000)
+
+  it("marks the themes this website lists as new, by their package id", async () => {
+    const [collections] = await loadEntities(['collections'])
+    const themes = collections.filter((c) => c.type === 'theme')
+
+    for (const { id, legacy } of newThemes.themes) {
+      expect(themes.find((theme) => theme.id === id)?.backward_compatibility, legacy).toBe(legacy)
+    }
+  })
 
   it('finds a picture in this repository for every banner and partnership logo the package names', async () => {
     const [collections] = await loadEntities(['collections'])
@@ -91,7 +103,7 @@ describe('website smoke test', () => {
     expect(home.banners.length).toBeGreaterThan(0)
     for (const shown of home.banners) expect(bannerImage(shown.image), shown.image).toBeTruthy()
     for (const partnership of home.featured_partnerships) {
-      expect(partnershipLogo(partnership.logo), partnership.logo).toBeTruthy()
+      expect(partnershipLogo(partnership.id), String(partnership.id)).toBeTruthy()
     }
   })
 

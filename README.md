@@ -44,7 +44,8 @@ and what legacy showed, with the rules this website follows, in
 - **`src/composables/explore.js`:** the records and legacy's rules over them: which monument a location shows for each Explore monument and which record is its related content, what a theme or a filter keeps, which site records a page shows.
 - **`src/views/`:** the home page, the theme page, the place page (country, territory, location) and the monument page.
 - **`src/components/`:** the blocks they share: the page frame with "Make Your Selection", the tiles, the travel records, the additional information, the featured partnerships, the home page's rows of picture panels and legacy's footer.
-- **`src/composables/chrome.js`, `theme/assets/`:** legacy's chrome, kept in this repository and handed to viewer-layout as its `chrome` map: the two logos at the root, and under `chrome/` the home banners and the featured partnerships' logos, each at the legacy path the package names. `public/favicon.ico` is legacy's favicon.
+- **`src/composables/chrome.js`, `theme/assets/`:** legacy's chrome, kept in this repository and handed to viewer-layout as its `chrome` map: the two logos at the root, and under `chrome/` the home banners, each at the legacy path the package names. The featured partnerships' logos are the site's own content, in `src/assets/partnerships/` by legacy id. `public/favicon.ico` is legacy's favicon.
+- **`src/config/new-themes.json`:** the themes the home page marks "NEW", by package id: the site's own choice, not inventory data (it starts as legacy's set).
 - **`locales/en.json`:** the website's own texts. The six text pages come from legacy, through inventory-app's `site-i18n`.
 
 Explore's own texts are English, as legacy's were. The offered languages

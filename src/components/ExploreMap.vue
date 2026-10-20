@@ -4,16 +4,20 @@ import { useRouter } from 'vue-router'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
-// Legacy's map, on OpenStreetMap's tiles through Leaflet (Pascal, 2026-09-28:
-// no Google Maps and no key): a marker for each place or monument the page
-// leads to, the markers standing on one spot sharing one popup of links, the
-// view fitted to them and never closer than the page's own zoom. A pin with
-// no link (a monument's own map) opens nothing.
+// Legacy's map through Leaflet, with no key (Pascal, 2026-10-20): legacy
+// opened every map on satellite imagery, so Esri World Imagery is the view a
+// map opens on, and OpenStreetMap's street map is the other layer. A marker
+// for each place or monument the page leads to, the markers standing on one
+// spot sharing one popup of links, the view fitted to them and never closer
+// than the page's own zoom. A pin with no link (a monument's own map) opens
+// nothing.
 const props = defineProps({
   /** [{ lat, lng, label, to }] */
   pins: { type: Array, default: () => [] },
   /** The page's own zoom: the closest the fitted view goes. */
   zoom: { type: Number, default: null },
+  /** { satellite, streets }: the layer switch's two names; no switch without both. */
+  layerLabels: { type: Object, default: null },
 })
 
 const router = useRouter()
@@ -21,9 +25,22 @@ const element = ref(null)
 let map = null
 let markers = null
 
-const TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
-// OpenStreetMap's tile policy asks every map using its tiles to credit it.
-const ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+// Each provider's terms ask every map using its tiles to credit it, in these words.
+const SATELLITE = {
+  url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  options: {
+    maxZoom: 19,
+    attribution:
+      'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+  },
+}
+const STREETS = {
+  url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  options: {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  },
+}
 
 function popup(group) {
   const box = document.createElement('div')
@@ -80,7 +97,11 @@ function draw() {
 onMounted(async () => {
   await nextTick()
   map = L.map(element.value, { scrollWheelZoom: false })
-  L.tileLayer(TILES, { maxZoom: 19, attribution: ATTRIBUTION }).addTo(map)
+  const satellite = L.tileLayer(SATELLITE.url, SATELLITE.options).addTo(map)
+  const streets = L.tileLayer(STREETS.url, STREETS.options)
+  if (props.layerLabels?.satellite && props.layerLabels?.streets) {
+    L.control.layers({ [props.layerLabels.satellite]: satellite, [props.layerLabels.streets]: streets }).addTo(map)
+  }
   markers = L.layerGroup().addTo(map)
   draw()
 })

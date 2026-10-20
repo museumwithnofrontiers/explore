@@ -1,5 +1,6 @@
 import { computed, reactive, watch } from 'vue'
 import { entityRef, loadEntities, mdStrip, useDataPackage, useI18n, useSiteConfig } from '@museumwnf/viewer-core'
+import newThemes from '../config/new-themes.json'
 
 // Explore's records, read the one way every website reads them: lazily, each
 // entity a shared ref that stays `null` until a route declaring it in
@@ -448,12 +449,15 @@ export function themePictures(theme) {
 }
 
 /**
- * Whether legacy marks a theme "NEW": its API's `newStatus`, true for a
- * thematic cycle whose status is 'e' (explore-api ThemeResource). The status
- * travels on the theme's English row, `extra.legacy_status`.
+ * Whether the home page marks a theme "NEW". Which themes are new is this
+ * website's own choice, not inventory data (Pascal, 2026-10-20): the themes
+ * listed in src/config/new-themes.json, by their package id. It starts as
+ * legacy's set, the six its API flagged `newStatus`.
  */
+const newThemeIds = new Set(newThemes.themes.map((theme) => theme.id))
+
 export function isNewTheme(theme) {
-  return text('collections', theme.id, 'en').extra?.legacy_status === 'e'
+  return newThemeIds.has(theme.id)
 }
 
 // ── Itineraries ──────────────────────────────────────────────────────────

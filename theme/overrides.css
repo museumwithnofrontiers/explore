@@ -95,10 +95,7 @@
 .explore-footer__link { color: #ffffff; text-decoration: none; }
 .explore-footer__link:hover { text-decoration: underline; }
 .explore-footer__policy { margin: 30px 0 20px; font-size: 14px; line-height: 16px; }
-.explore-footer__copyright,
-.explore-footer__attribution { margin: 0; font-size: 14px; line-height: 16px; }
-.explore-footer__attribution { margin-top: 10px; }
-.explore-footer__attribution-label { padding-inline-end: 0.25rem; font-weight: 700; }
+.explore-footer__copyright { margin: 0; font-size: 14px; line-height: 16px; }
 
 @media (max-width: 949px) {
   .mwnf-footer { padding: 40px; }
