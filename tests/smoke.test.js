@@ -83,6 +83,11 @@ describe('website smoke test', () => {
     )
     // Legacy's footer has no rights-holder line.
     expect(host.querySelector('.mwnf-footer').textContent).not.toContain('Rights holder')
+    // "Follow us" and legacy's six social networks.
+    expect(host.querySelector('.explore-footer__follow').textContent.trim()).toBe('Follow us')
+    expect([...host.querySelectorAll('.explore-footer .mwnf-footer__social-link')].map((a) => a.getAttribute('aria-label'))).toEqual([
+      'YouTube', 'X', 'Facebook', 'Instagram', 'Weibo', 'LinkedIn',
+    ])
 
     app.unmount()
   }, 60000)
@@ -222,7 +227,11 @@ describe('website smoke test', () => {
     const { app, host } = await mountOn(`#/monument/${record.id}?location=${kairouan.id}`, '.explore-monument__name')
 
     expect(host.querySelector('.explore-monument__source').textContent).toBe('Virtual Museum — Discover Islamic Art')
-    expect(host.querySelector('.explore-tabs__panel').textContent).toContain('located in Raqqada')
+    // The museum's text arrives with the partners' translations, after the name.
+    await vi.waitFor(
+      () => expect(host.querySelector('.explore-tabs__panel').textContent).toContain('located in Raqqada'),
+      { timeout: 30000 },
+    )
     // Explore's own record of it is never related content.
     expect(texts(host, '.explore-tabs__tab')).not.toContain('Related Content')
 

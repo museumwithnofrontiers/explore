@@ -87,9 +87,30 @@
   .mwnf-banner__subtitle { font-size: 18px; line-height: 23px; }
 }
 
-/* Footer: the links, the language policy and the copyright line, in Roboto Condensed on navy. */
+/* Footer: the links, the language policy and the copyright line, in Roboto
+   Condensed on navy; "Follow us" and the social icons beside them, above them
+   on a narrower screen. */
 .mwnf-footer { margin-top: 100px; padding-inline: 60px; border-top: 0; }
-.explore-footer { font-family: 'Roboto Condensed', var(--mwnf-font-body); }
+.explore-footer { display: flex; justify-content: space-between; width: 100%; font-family: 'Roboto Condensed', var(--mwnf-font-body); }
+.explore-footer__main { margin-right: 200px; }
+.explore-footer__social { display: flex; flex-direction: column; margin-right: 10px; }
+.explore-footer__follow { margin: 0 0 10px; line-height: 18px; }
+.explore-footer .mwnf-footer__social { display: grid; grid-template-columns: repeat(6, 32px); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.explore-footer .mwnf-footer__social-link { display: block; color: #ffffff; }
+.explore-footer .mwnf-footer__social-icon { display: block; width: 30px; height: 30px; }
+
+@media (max-width: 1199px) {
+  .explore-footer { flex-direction: column-reverse; }
+  .explore-footer__main { margin-right: 0; }
+  .explore-footer__social { flex-direction: row; align-items: center; margin: 0 0 20px; }
+  .explore-footer__follow { margin: 0 20px 0 0; }
+}
+
+@media (max-width: 499px) {
+  .explore-footer__follow { display: none; }
+  .explore-footer .mwnf-footer__social { grid-template-columns: repeat(6, 24px); }
+  .explore-footer .mwnf-footer__social-icon { width: 22px; height: 22px; }
+}
 .explore-footer__links { display: flex; flex-wrap: wrap; gap: 0 30px; margin: 0; padding: 0; list-style: none; line-height: 18px; }
 .explore-footer__links li { margin-top: 10px; }
 .explore-footer__link { color: #ffffff; text-decoration: none; }

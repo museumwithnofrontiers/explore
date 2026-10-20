@@ -2,11 +2,12 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { mwnfLinks, useI18n } from '@museumwnf/viewer-core'
+import { SocialLinks, mwnfSocialLinks } from '@museumwnf/viewer-layout'
 
 // Legacy's footer (explore-client App.vue), and nothing else (Pascal,
 // 2026-10-20: copy legacy): MWNF's links and this site's, in its order, the
-// language policy and the copyright line. MWNF's pages open in a new tab, as
-// legacy's did.
+// language policy and the copyright line, then "Follow us" with legacy's six
+// social networks. MWNF's pages open in a new tab, as legacy's did.
 const { t } = useI18n()
 const router = useRouter()
 
@@ -29,17 +30,23 @@ const copyright = computed(() => `© ${t('explore.footer.copyright')}${new Date(
 
 <template>
   <div class="explore-footer">
-    <ul class="explore-footer__links">
-      <li v-for="link in links" :key="link.label">
-        <a
-          class="explore-footer__link"
-          :href="link.href"
-          :target="link.external ? '_blank' : undefined"
-          :rel="link.external ? 'noopener' : undefined"
-        >{{ link.label }}</a>
-      </li>
-    </ul>
-    <p class="explore-footer__policy">{{ t('explore.footer.languagePolicy') }}</p>
-    <p class="explore-footer__copyright">{{ copyright }}</p>
+    <div class="explore-footer__main">
+      <ul class="explore-footer__links">
+        <li v-for="link in links" :key="link.label">
+          <a
+            class="explore-footer__link"
+            :href="link.href"
+            :target="link.external ? '_blank' : undefined"
+            :rel="link.external ? 'noopener' : undefined"
+          >{{ link.label }}</a>
+        </li>
+      </ul>
+      <p class="explore-footer__policy">{{ t('explore.footer.languagePolicy') }}</p>
+      <p class="explore-footer__copyright">{{ copyright }}</p>
+    </div>
+    <div class="explore-footer__social">
+      <p class="explore-footer__follow">{{ t('explore.footer.followUs') }}</p>
+      <SocialLinks :links="mwnfSocialLinks" />
+    </div>
   </div>
 </template>
