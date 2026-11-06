@@ -24,7 +24,7 @@ const searchOpen = ref(false)
 const menuOpen = ref(false)
 const type = ref(route.name === 'search' && route.params.type === 'google' ? 'google' : 'mwnf')
 const term = ref('')
-const placeholder = computed(() => t(type.value === 'google' ? 'explore.search.placeholderGoogle' : 'explore.search.placeholderMwnf'))
+const placeholder = computed(() => (type.value === 'google' ? t('explore.search.placeholderGoogle') : t('explore.search.placeholderMwnf')))
 const message = ref('')
 
 watch(() => route.fullPath, () => {

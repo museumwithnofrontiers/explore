@@ -28,6 +28,6 @@ const html = computed(() =>
 <template>
   <div v-if="text" class="explore-read-more" :dir="dir || undefined">
     <span class="explore-read-more__text" v-html="html"></span>
-    <span v-if="cut.cut" class="explore-read-more__toggle" role="button" tabindex="0" @click="full = !full" @keydown.enter="full = !full">{{ t(full ? 'explore.text.readLess' : 'explore.text.readMore') }}</span>
+    <span v-if="cut.cut" class="explore-read-more__toggle" role="button" tabindex="0" @click="full = !full" @keydown.enter="full = !full">{{ full ? t('explore.text.readLess') : t('explore.text.readMore') }}</span>
   </div>
 </template>

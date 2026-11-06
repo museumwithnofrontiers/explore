@@ -62,7 +62,7 @@ const detailed = computed(() => legacyLines(legacyCut(textOf(second.value, secon
         <div class="explore-background__detailed" :dir="dirOf(secondLanguage) || undefined" v-html="detailed"></div>
       </template>
       <a class="explore-background__toggle" role="button" tabindex="0" @click="open = !open" @keydown.enter="open = !open">{{
-        t(open ? 'explore.location.hideDetailed' : 'explore.location.readDetailed')
+        open ? t('explore.location.hideDetailed') : t('explore.location.readDetailed')
       }}</a>
     </div>
   </div>

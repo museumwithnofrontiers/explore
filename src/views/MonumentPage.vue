@@ -104,8 +104,10 @@ function fromOf({ kind, record }, leads) {
   if (kind === 'explore') return t('explore.source.explore')
   if (kind === 'museum') return t('explore.source.virtualMuseum')
   const source = sourceOf(record).source
-  if (source === 'sharingHistory') return t(leads ? 'explore.source.virtualMuseum' : 'explore.source.sharingHistory')
-  return t(`explore.source.${source}`)
+  if (source === 'sharingHistory') return leads ? t('explore.source.virtualMuseum') : t('explore.source.sharingHistory')
+  if (source === 'trails') return t('explore.source.trails')
+  if (source === 'virtualMuseum') return t('explore.source.virtualMuseum')
+  return t('explore.source.explore')
 }
 
 function textsOf(row) {
@@ -169,19 +171,19 @@ const leadLanguages = computed(() => descriptions.value[0]?.languages ?? [])
 const leadRow = computed(() => (lead.value ? rowOf(lead.value, language.value) : {}))
 // Legacy's MonumentField wrote a few labels in capitals over their text.
 const field = (key, label, value, block = false) =>
-  value ? { key, label: block ? t(label).toUpperCase() : t(label), html: md(String(value)), block } : null
+  value ? { key, label: block ? label.toUpperCase() : label, html: md(String(value)), block } : null
 const directions = computed(() => {
   const row = leadRow.value
   const contact = row.monument_contact ?? {}
   return [
-    field('directions', 'explore.monument.directionsLabel', row.how_to_reach, true),
-    field('address', 'explore.monument.address', contact.address ?? row.address),
-    field('contact', 'explore.info.contact', row.contact, true),
-    field('tel', 'explore.monument.telephone', contact.phone ?? row.phone),
-    field('fax', 'explore.monument.fax', contact.fax ?? row.fax),
-    field('email', 'explore.monument.email', contact.email ?? row.email),
-    field('website', 'explore.monument.website', contact.website ?? row.website),
-    field('institution', 'explore.monument.responsibleInstitution', contact.responsible_institution ?? row.responsible_institution_org),
+    field('directions', t('explore.monument.directionsLabel'), row.how_to_reach, true),
+    field('address', t('explore.monument.address'), contact.address ?? row.address),
+    field('contact', t('explore.info.contact'), row.contact, true),
+    field('tel', t('explore.monument.telephone'), contact.phone ?? row.phone),
+    field('fax', t('explore.monument.fax'), contact.fax ?? row.fax),
+    field('email', t('explore.monument.email'), contact.email ?? row.email),
+    field('website', t('explore.monument.website'), contact.website ?? row.website),
+    field('institution', t('explore.monument.responsibleInstitution'), contact.responsible_institution ?? row.responsible_institution_org),
   ].filter(Boolean)
 })
 const travel = computed(() => (monument.value ? travelFor('monument', monument.value.exploreId) : {}))
@@ -203,9 +205,9 @@ const additional = computed(() => {
   const row = leadRow.value
   return {
     fields: [
-      field('information', 'explore.monument.information', row.info || row.explore?.info || row.opening_hours),
-      field('note', 'explore.monument.notes', row.note),
-      field('bibliography', 'explore.monument.bibliography', row.bibliography),
+      field('information', t('explore.monument.information'), row.info || row.explore?.info || row.opening_hours),
+      field('note', t('explore.monument.notes'), row.note),
+      field('bibliography', t('explore.monument.bibliography'), row.bibliography),
     ].filter(Boolean),
     accommodations: (travel.value.accommodations ?? []).map((r) => ({ ...contactOf(r), category: categoryName(r.category) })),
     guidedVisits: (travel.value.guidedVisits ?? []).map(contactOf),

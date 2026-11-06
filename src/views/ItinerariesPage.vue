@@ -70,14 +70,14 @@ const crumbs = computed(() => [
           <p v-if="entry.description" class="explore-itinerary__description">{{ entry.description }}</p>
           <RouterLink class="explore-button" :to="entry.to">{{ t('explore.itinerary.readMore') }}</RouterLink>
           <template v-if="entry.books.length">
-            <h3 class="explore-itinerary__label">{{ t(entry.books.length > 1 ? 'explore.travel.books' : 'explore.travel.book') }}</h3>
+            <h3 class="explore-itinerary__label">{{ entry.books.length > 1 ? t('explore.travel.books') : t('explore.travel.book') }}</h3>
             <p v-for="book in entry.books" :key="book.id" class="explore-itinerary__record">
               <a v-if="book.href" :href="book.href" target="_blank" rel="noopener" v-html="book.title"></a>
               <span v-else v-html="book.title"></span>
             </p>
           </template>
           <template v-if="entry.tours.length">
-            <h3 class="explore-itinerary__label">{{ t(entry.tours.length > 1 ? 'explore.travel.tours' : 'explore.travel.tour') }}</h3>
+            <h3 class="explore-itinerary__label">{{ entry.tours.length > 1 ? t('explore.travel.tours') : t('explore.travel.tour') }}</h3>
             <p v-for="tour in entry.tours" :key="tour.id" class="explore-itinerary__record">
               <a v-if="tour.href" :href="tour.href" target="_blank" rel="noopener" v-html="tour.title"></a>
               <span v-else v-html="tour.title"></span>

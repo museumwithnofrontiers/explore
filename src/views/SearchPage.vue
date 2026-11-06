@@ -21,11 +21,12 @@ const router = useRouter()
 const ready = useTexts(['collections', 'items', 'countries'])
 
 const GOOGLE_ENGINE = '011100841504088668422:r2cl-my4ubm'
-const SOURCE_WORDS = {
-  explore: 'explore.source.explore',
-  'virtual-museum': 'explore.source.virtualMuseum',
-  'sharing-history': 'explore.source.sharingHistory',
-  trails: 'explore.source.trails',
+// Legacy's word for where a result comes from.
+function sourceWord(origin) {
+  if (origin === 'virtual-museum') return t('explore.source.virtualMuseum')
+  if (origin === 'sharing-history') return t('explore.source.sharingHistory')
+  if (origin === 'trails') return t('explore.source.trails')
+  return t('explore.source.explore')
 }
 
 const mode = ref(props.type === 'google' ? 'google' : 'mwnf')
@@ -40,8 +41,8 @@ const shown = computed(() =>
   hits.value.slice((page.value - 1) * SEARCH_PAGE_SIZE, page.value * SEARCH_PAGE_SIZE).map((hit) => ({
     ...hit,
     // Legacy's words for where a result comes from; an Explore record named by its source alone.
-    from: t(SOURCE_WORDS[hit.origin]),
-    project: hit.project || (hit.origin === 'explore' ? t(SOURCE_WORDS.explore) : ''),
+    from: sourceWord(hit.origin),
+    project: hit.project || (hit.origin === 'explore' ? sourceWord('explore') : ''),
     link: searchResultLink(hit),
     image: mediaUrl(hit.record.images?.[0]?.url, 'small'),
     place: [title(hit.location, 'en'), title(hit.country, 'en')].filter(Boolean).join(', '),
@@ -102,7 +103,7 @@ watch(() => [props.type, query.value], async () => {
         <button class="explore-search-page__type" :class="{ 'explore-search-page__type--selected': mode === 'google' }" type="button" @click="mode = 'google'">{{ t('explore.search.google') }}</button>
       </div>
       <form class="explore-search-page__form" role="search" @submit.prevent="submit">
-        <input v-model="term" class="explore-search-page__input" type="search" :placeholder="t(mode === 'google' ? 'explore.search.placeholderGoogle' : 'explore.search.placeholderMwnf')" />
+        <input v-model="term" class="explore-search-page__input" type="search" :placeholder="mode === 'google' ? t('explore.search.placeholderGoogle') : t('explore.search.placeholderMwnf')" />
         <button class="explore-search-page__submit" type="submit" :aria-label="t('explore.search.submit')">
           <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><circle cx="6.5" cy="6.5" r="5" fill="none" stroke="currentColor" stroke-width="2" /><path d="M10.2 10.2 15 15" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" /></svg>
         </button>

@@ -144,36 +144,37 @@ const exploring = computed(() =>
 )
 
 // The steps of the path, in legacy's order: each its numbered label, its
-// placeholder, its options, its value and where picking one goes.
+// placeholder, its options, its value and where picking one goes. The words
+// are passed already read, each name written out where it is asked for.
 const row = (key, name, placeholder, options, value, pick, disabled = !options.length) =>
-  ({ key, label: `${steps.value[key]} ${t(name)}`, placeholder: t(placeholder), options, value, pick, disabled })
+  ({ key, label: `${steps.value[key]} ${name}`, placeholder, options, value, pick, disabled })
 const rows = computed(() => {
   const territoryRow = () =>
-    row('territories', 'explore.select.territories', 'explore.select.pickTerritory', territoryOptions.value, props.territory?.id ?? '', pickTerritory, !props.country)
+    row('territories', t('explore.select.territories'), t('explore.select.pickTerritory'), territoryOptions.value, props.territory?.id ?? '', pickTerritory, !props.country)
   const list =
     props.mode === 'theme'
       ? [
-          row('themes', 'explore.select.themes', 'explore.select.pickTheme', themeOptions.value, props.theme?.id ?? '', pickTheme, false),
-          row('countries', 'explore.select.countries', 'explore.select.pickCountry', countryOptions.value, props.country?.id ?? '', pickCountry),
+          row('themes', t('explore.select.themes'), t('explore.select.pickTheme'), themeOptions.value, props.theme?.id ?? '', pickTheme, false),
+          row('countries', t('explore.select.countries'), t('explore.select.pickCountry'), countryOptions.value, props.country?.id ?? '', pickCountry),
           steps.value.territories && territoryRow(),
-          row('locations', 'explore.select.locations', 'explore.select.pickLocation', locationOptions.value, props.location?.id ?? '', pickLocation),
-          row('monuments', 'explore.select.monuments', 'explore.select.pickMonument', monuments.value, monumentValue.value, pickMonument),
+          row('locations', t('explore.select.locations'), t('explore.select.pickLocation'), locationOptions.value, props.location?.id ?? '', pickLocation),
+          row('monuments', t('explore.select.monuments'), t('explore.select.pickMonument'), monuments.value, monumentValue.value, pickMonument),
         ]
       : props.mode === 'itinerary'
         ? [
-            row('countries', 'explore.select.countries', 'explore.select.pickCountry', itineraryCountryOptions.value, props.country?.id ?? '', pickItineraryCountry, false),
+            row('countries', t('explore.select.countries'), t('explore.select.pickCountry'), itineraryCountryOptions.value, props.country?.id ?? '', pickItineraryCountry, false),
             steps.value.territories && territoryRow(),
-            row('itineraries', 'explore.itinerary.itineraries', 'explore.itinerary.pickItinerary', itineraryOptions.value, props.itinerary?.id ?? '', pickItinerary),
-            row('subItineraries', 'explore.itinerary.subItineraries', 'explore.itinerary.pickSubItinerary', subOptions.value, props.subItinerary?.id ?? '', pickSub),
-            row('locations', 'explore.select.locations', 'explore.select.pickLocation', subLocationOptions.value, props.location?.id ?? '', pickSubLocation),
-            row('monuments', 'explore.select.monuments', 'explore.select.pickMonument', subMonuments.value, monumentValue.value, pickSubMonument),
+            row('itineraries', t('explore.itinerary.itineraries'), t('explore.itinerary.pickItinerary'), itineraryOptions.value, props.itinerary?.id ?? '', pickItinerary),
+            row('subItineraries', t('explore.itinerary.subItineraries'), t('explore.itinerary.pickSubItinerary'), subOptions.value, props.subItinerary?.id ?? '', pickSub),
+            row('locations', t('explore.select.locations'), t('explore.select.pickLocation'), subLocationOptions.value, props.location?.id ?? '', pickSubLocation),
+            row('monuments', t('explore.select.monuments'), t('explore.select.pickMonument'), subMonuments.value, monumentValue.value, pickSubMonument),
           ]
         : [
-            row('countries', 'explore.select.countries', 'explore.select.pickCountry', countryOptions.value, props.country?.id ?? '', pickCountry, false),
-            steps.value.filters && row('filters', 'explore.select.filters', 'explore.select.pickFilter', filterOptions.value, props.filter, pickFilter),
+            row('countries', t('explore.select.countries'), t('explore.select.pickCountry'), countryOptions.value, props.country?.id ?? '', pickCountry, false),
+            steps.value.filters && row('filters', t('explore.select.filters'), t('explore.select.pickFilter'), filterOptions.value, props.filter, pickFilter),
             steps.value.territories && territoryRow(),
-            row('locations', 'explore.select.locations', 'explore.select.pickLocation', locationOptions.value, props.location?.id ?? '', pickLocation),
-            row('monuments', 'explore.select.monuments', 'explore.select.pickMonument', monuments.value, monumentValue.value, pickMonument),
+            row('locations', t('explore.select.locations'), t('explore.select.pickLocation'), locationOptions.value, props.location?.id ?? '', pickLocation),
+            row('monuments', t('explore.select.monuments'), t('explore.select.pickMonument'), monuments.value, monumentValue.value, pickMonument),
           ]
   return list.filter(Boolean)
 })
