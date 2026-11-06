@@ -1,27 +1,27 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import {
-  NotFoundView, languageLabels, md, mdInline, mdStrip, renderBlock, useDataPackage, useGlossaryPopup, useI18n,
-  useRecordSheet,
+  NotFoundView, md, mdInline, renderBlock, useDataPackage, useGlossaryPopup, useI18n, useRecordSheet,
 } from '@museumwnf/viewer-core'
-import { GlossaryPopover, MediaGallery, RecordLanguages, SpecialFeatures } from '@museumwnf/viewer-layout/content'
-import AdditionalInformation from '../components/AdditionalInformation.vue'
+import { GlossaryPopover } from '@museumwnf/viewer-layout/content'
 import ExploreFrame from '../components/ExploreFrame.vue'
 import ExploreMap from '../components/ExploreMap.vue'
+import MonumentEntry from '../components/MonumentEntry.vue'
+import ReadIn from '../components/ReadIn.vue'
 import {
-  collectionById, countryOf, detailsOf, excerpt, findMonument, isSubItinerary, itinerariesLink, itinerariesOf,
-  itineraryCountries, itineraryLink, loadTexts, monumentName, monumentView, partnershipsFor, placeLink,
-  placePosition, positionOf, routeKind, routeLink, sourceOf, subItineraryLink, territoryOf, text, themeLink, title,
-  travelFor, useTexts,
+  byLanguage, collectionById, countryOf, detailsOf, findMonument, isSubItinerary, itinerariesLink, itinerariesOf,
+  itineraryCountries, itineraryLink, itineraryPicture, legacyCut, legacyLines, loadTexts, monumentName, monumentView,
+  ownText, placeLink, placePosition, positionOf, recordTexts, roman, routeKind, routeLink, sourceOf, subItinerariesOf,
+  pathTerritory, subItineraryLink, text, themeLink, title, travelFor, useTexts,
 } from '../composables/explore.js'
 
-// A monument's page, legacy's tabs: its description (in any language its
-// record carries), its map, how to get there, the travel layer's practical
-// information, its related content — the other records and the museum the
-// Explore monument stands for, and its record's special features — and the
-// sub-itineraries it is on. Which of its records the description shows, and
-// which are related content, is legacy's rule (`monumentView`).
+// A monument's page, legacy's MonumentComponent (explore-client): its tabs —
+// DESCRIPTION, MAP, GET DIRECTIONS, ADDITIONAL INFORMATION, RELATED CONTENT,
+// RELATED ITINERARIES —, the description the record legacy leads with
+// (`monumentView`), the related content the other records and their special
+// features, each opened from its heading, "In <project> <source>". The
+// language a text is read in is the address's `?lan=`, as legacy's `lan-…`.
 //
 // The address names the monument by its own record (`/monument/:id`) and the
 // location it is explored from (`?location=`): one record can be a monument
@@ -32,8 +32,9 @@ const props = defineProps({
 })
 const { t, locale } = useI18n()
 const route = useRoute()
+const router = useRouter()
 const { manifest } = useDataPackage()
-const ready = useTexts(['collections', 'countries', 'items'])
+const ready = useTexts(['collections', 'countries', 'items', 'partners'])
 
 const monument = computed(() =>
   findMonument(props.id, typeof route.query.location === 'string' ? route.query.location : null),
@@ -45,6 +46,8 @@ const theme = computed(() => {
   const collection = collectionById(route.query.theme)
   return collection?.type === 'theme' ? collection : null
 })
+// The territory the address names (`?territory=`), as legacy's `tr-` segment.
+const territory = computed(() => pathTerritory(location.value, route.query.territory))
 const sub = computed(() => {
   const collection = collectionById(route.query.itinerary)
   return collection && isSubItinerary(collection) ? collection : null
@@ -57,131 +60,169 @@ const fromRoute = computed(() => {
 
 const view = computed(() => monumentView(monument.value))
 const lead = computed(() => view.value.lead)
-const isMuseum = computed(() => lead.value?.kind === 'museum')
 
-const { language, languages, dir, select, glossary, terms } = useRecordSheet(main, {
-  entity: 'items',
-  translations: ['partners'],
-  languages: () => (isMuseum.value ? lead.value.record.languages : main.value?.languages),
-})
-// An entry's text in the language it is read in, field by field English where
-// that language has none: legacy's French row of an Exhibition Trails record
-// is often its name alone. Explore's own text about a record is that record's
-// `explore` row; a museum's is its partner's.
-function entryText({ kind, record }, lang) {
-  if (kind === 'museum') return text('partners', record.id, lang)
-  const x = text('items', record.id, lang)
-  return kind === 'explore' ? (x.explore ?? {}) : x
+// The language the texts are read in: the address's, as legacy's `lan-…`.
+const language = computed(() => (typeof route.query.lan === 'string' && route.query.lan) || 'en')
+function readIn(code) {
+  if (code && code !== language.value) router.replace({ query: { ...route.query, lan: code } })
 }
-const own = computed(() => (lead.value ? entryText(lead.value, language.value) : {}))
 watch(language, (lang) => { if (lang) loadTexts(['items', 'partners'], lang) }, { immediate: true })
+
+const { glossary, terms } = useRecordSheet(main, { entity: 'items', translations: ['partners'], languages: () => [language.value] })
 const { active, onClick, close } = useGlossaryPopup(terms)
 const activeHtml = computed(() => (active.value ? renderBlock(active.value.definition, { breaks: true }) : ''))
 
-const heading = computed(() => (monument.value ? monumentName(monument.value, locale.value) : ''))
-const place = computed(() =>
-  [title(location.value, locale.value), title(country.value, locale.value)].filter(Boolean).join(', '),
-)
+const heading = computed(() => (monument.value ? monumentName(monument.value, 'en') : ''))
+const place = computed(() => [title(location.value, 'en'), title(country.value, 'en')].filter(Boolean).join(', '))
 
-// ── Where each record comes from ──────────────────────────────────────────
+// ── The records ───────────────────────────────────────────────────────────
 
-// Legacy's dictionary names two of the sources, and Explore's own record is
-// named by nothing. Legacy calls a museum "Virtual Museum", with its project,
-// and a Sharing History record too when it leads the page; as related content
-// it names one by a word its dictionary lacks, so there the project alone.
-const sourceLabels = computed(() => ({
-  trails: t('explore.source.trails'),
-  virtualMuseum: t('explore.source.virtualMuseum'),
-}))
-function sourceLine({ kind, record }, lang, { leads = false } = {}) {
-  if (kind === 'explore') return ''
-  const museum = kind === 'museum'
-  const projectId = museum ? record.project_uuids?.find((id) => manifest.projects?.[id]) : record.project_id
-  const project = manifest.projects?.[projectId]?.name
-  const source = museum ? 'virtualMuseum' : sourceOf(record).source
-  const label = sourceLabels.value[leads && source === 'sharingHistory' ? 'virtualMuseum' : source]
-  return [label, project?.[lang] ?? project?.en].filter(Boolean).join(' — ')
+// An entry's row in a language, no field taken from another: legacy read
+// each language's row alone. Explore's own text about a record is that
+// record's `explore` row; a museum's is its partner's.
+function rowOf({ kind, record }, lang) {
+  if (kind === 'museum') return ownText('partners', record.id, lang)
+  const row = ownText('items', record.id, lang)
+  return kind === 'explore' ? (row.explore ?? {}) : row
 }
 
-function images(record, lang, name) {
-  return (record.images ?? []).map((image) => {
-    const caption = image.captions?.[lang] ?? image.captions?.en ?? ''
-    return {
-      url: image.url,
-      alt: mdStrip(caption || name),
-      caption,
-      photographer: image.photographer ?? '',
-      copyright: image.copyright ?? '',
-    }
-  })
+// Legacy's "In <project> <source>": the project a record belongs to, in the
+// language its heading is read in, and the database it comes from. Explore's
+// own records and the museums name no project; an Exhibition Trails record
+// its trail; a Sharing History record leading the page is called "Virtual
+// Museum".
+const nameIn = (names, lang) => names?.[lang] ?? names?.en ?? ''
+function projectOf({ kind, record }, lang) {
+  if (kind !== 'record' || sourceOf(record).source === 'explore') return ''
+  if (sourceOf(record).source === 'trails') {
+    const code = String(record.backward_compatibility).split(':')[2]
+    return nameIn(manifest.trail_projects?.[code]?.name, lang)
+  }
+  return nameIn(manifest.projects?.[record.project_id]?.name, lang)
+}
+function fromOf({ kind, record }, leads) {
+  if (kind === 'explore') return t('explore.source.explore')
+  if (kind === 'museum') return t('explore.source.virtualMuseum')
+  const source = sourceOf(record).source
+  if (source === 'sharingHistory') return t(leads ? 'explore.source.virtualMuseum' : 'explore.source.sharingHistory')
+  return t(`explore.source.${source}`)
 }
 
-// ── The description ───────────────────────────────────────────────────────
-
-const credit = (label, value) => (value ? { label, value } : null)
-const sheet = computed(() => {
-  if (!lead.value) return null
-  const x = own.value
-  // Explore's own text shows with its record's pictures.
-  const pictured = lead.value.record
-  const name = x.name ?? text('items', main.value.id, language.value).name ?? pictured.internal_name
+function textsOf(row) {
   return {
-    source: sourceLine(lead.value, language.value, { leads: true }),
-    name: mdInline(name, { glossary: glossary.value }),
-    images: images(pictured, language.value, name),
+    name: row.name ?? '',
+    alsoKnownAs: row.alternate_name || row.also_known_as || '',
+    date: row.dates ?? '',
+    artist: row.artist ?? '',
+    history: row.history ?? '',
+    description: row.description ?? '',
+    preparedBy: row.prepared_by || row.author || '',
+    copyEditedBy: row.copy_editor ?? '',
+    translationBy: row.translator ?? '',
+    translationCopyEditedBy: row.translation_copy_editor ?? '',
+    bibliography: row.bibliography ?? '',
+  }
+}
+
+function entryOf(source, { leads = false } = {}) {
+  const { kind, record } = source
+  const languages = record.languages ?? ['en']
+  const headerLanguage = languages.includes(language.value) ? language.value : 'en'
+  return {
+    key: `${kind}:${record.id}`,
+    name: mdInline(rowOf(source, headerLanguage).name ?? record.internal_name ?? ''),
+    project: projectOf(source, headerLanguage),
+    from: fromOf(source, leads),
+    languages,
+    images: record.images ?? [],
+    textsIn: (lang) => textsOf(rowOf(source, lang)),
+  }
+}
+
+const descriptions = computed(() => (lead.value ? [entryOf(lead.value, { leads: true })] : []))
+
+// Legacy's related content: the other records, then the special features of
+// every Virtual Museum record the monument is.
+const related = computed(() => {
+  if (!monument.value) return []
+  const records = view.value.related.map((entry) => entryOf(entry))
+  const virtualMuseum = [monument.value.main, ...monument.value.related].filter(
+    (record) => sourceOf(record).source === 'virtualMuseum',
+  )
+  const features = virtualMuseum.flatMap((record) =>
+    detailsOf(record).map((feature) => ({
+      ...entryOf({ kind: 'record', record: { ...feature, languages: feature.languages ?? record.languages } }),
+      project: nameIn(manifest.projects?.[feature.project_id ?? record.project_id]?.name, language.value),
+      from: t('explore.source.virtualMuseum'),
+    })),
+  )
+  return [...records, ...features]
+})
+const relatedIndex = ref(0)
+watch(() => props.id, () => { relatedIndex.value = 0 })
+
+// ── Getting there and additional information ──────────────────────────────
+
+// Legacy's fields of the leading record, in the language read: each one's
+// label, in capitals over the text for the directions and the contact.
+const leadLanguages = computed(() => descriptions.value[0]?.languages ?? [])
+const leadRow = computed(() => (lead.value ? rowOf(lead.value, language.value) : {}))
+// Legacy's MonumentField wrote a few labels in capitals over their text.
+const field = (key, label, value, block = false) =>
+  value ? { key, label: block ? t(label).toUpperCase() : t(label), html: md(String(value)), block } : null
+const directions = computed(() => {
+  const row = leadRow.value
+  const contact = row.monument_contact ?? {}
+  return [
+    field('directions', 'explore.monument.directionsLabel', row.how_to_reach, true),
+    field('address', 'explore.monument.address', contact.address ?? row.address),
+    field('contact', 'explore.info.contact', row.contact, true),
+    field('tel', 'explore.monument.telephone', contact.phone ?? row.phone),
+    field('fax', 'explore.monument.fax', contact.fax ?? row.fax),
+    field('email', 'explore.monument.email', contact.email ?? row.email),
+    field('website', 'explore.monument.website', contact.website ?? row.website),
+    field('institution', 'explore.monument.responsibleInstitution', contact.responsible_institution ?? row.responsible_institution_org),
+  ].filter(Boolean)
+})
+const travel = computed(() => (monument.value ? travelFor('monument', monument.value.exploreId) : {}))
+const contactOf = (record) => {
+  const x = recordTexts(record, 'en')
+  return {
+    id: record.id,
+    lines: [x.name ?? x.title, x.street, x.city, x.zip, x.phone, x.fax, x.email].filter(Boolean),
+    url: x.url ?? x.link ?? '',
+    person: x.contact_person ?? '',
+    note: x.note ?? '',
+  }
+}
+const categoryName = (code) => {
+  const category = (travel.value.categories ?? []).find((c) => c.code === code)
+  return category ? (byLanguage(category.names, 'en') ?? code) : ''
+}
+const additional = computed(() => {
+  const row = leadRow.value
+  return {
     fields: [
-      credit(t('sheet.field.alsoKnownAs'), x.alternate_name || x.also_known_as),
-      credit(t('sheet.field.date'), x.dates),
-      credit(t('sheet.field.location'), x.location || x.city),
+      field('information', 'explore.monument.information', row.info || row.explore?.info || row.opening_hours),
+      field('note', 'explore.monument.notes', row.note),
+      field('bibliography', 'explore.monument.bibliography', row.bibliography),
     ].filter(Boolean),
-    description: md(x.description, { glossary: glossary.value }),
-    history: md(x.history, { glossary: glossary.value }),
-    bibliography: md(x.bibliography),
-    credits: [
-      credit(t('sheet.field.preparedBy'), x.prepared_by || x.author),
-      credit(t('sheet.field.copyeditedBy'), x.copy_editor),
-      credit(t('sheet.field.translationBy'), x.translator),
-      credit(t('sheet.field.translationCopyeditedBy'), x.translation_copy_editor),
-    ].filter(Boolean),
+    accommodations: (travel.value.accommodations ?? []).map((r) => ({ ...contactOf(r), category: categoryName(r.category) })),
+    guidedVisits: (travel.value.guidedVisits ?? []).map(contactOf),
+    websites: (travel.value.usefulWebsites ?? []).map((site) => {
+      const x = recordTexts(site, 'en')
+      return { id: site.id, title: x.title ?? '', url: x.link ?? '' }
+    }),
   }
 })
-
-// ── Getting there ─────────────────────────────────────────────────────────
-
-const directions = computed(() => {
-  if (!lead.value) return []
-  const x = own.value
-  return [
-    { key: 'howToReach', label: t('explore.info.howToReach'), value: x.how_to_reach || x.explore?.how_to_reach },
-    { key: 'contact', label: t('explore.info.contact'), value: x.contact || x.monument_contact },
-    // A museum's information is its opening hours.
-    { key: 'information', label: t('explore.info.information'), value: x.info || x.explore?.info || x.opening_hours },
-  ]
-    .filter((entry) => entry.value)
-    .map((entry) => ({ ...entry, html: md(entry.value) }))
-})
-
-const travel = computed(() => (monument.value ? travelFor('monument', monument.value.exploreId) : {}))
-
-// ── Related content ───────────────────────────────────────────────────────
-
-const related = computed(() =>
-  view.value.related.map((entry) => {
-    const { record } = entry
-    const x = entryText(entry, language.value)
-    const name = x.name ?? record.internal_name
-    return {
-      id: record.id,
-      source: sourceLine(entry, language.value),
-      name: mdInline(name),
-      images: images(record, language.value, name),
-      description: md(x.description),
-      by: x.prepared_by || x.author || '',
-    }
-  }),
+const hasAdditional = computed(
+  () =>
+    additional.value.fields.length +
+      additional.value.accommodations.length +
+      additional.value.guidedVisits.length +
+      additional.value.websites.length >
+    0,
 )
-const features = computed(() => detailsOf(main.value))
-const featureText = (feature) => text('items', feature.id, language.value)
 
 // ── The map and the itineraries ───────────────────────────────────────────
 
@@ -189,15 +230,20 @@ const position = computed(() => positionOf(monument.value))
 const pin = computed(() => (position.value ? [{ ...position.value, label: heading.value }] : []))
 
 // Legacy cut a sub-itinerary's text in this list at this many characters.
-const DESCRIPTION_LENGTH = 400
+const SUB_DESCRIPTION_LENGTH = 400
 const onItineraries = computed(() =>
   itinerariesOf(monument.value).map((entry) => {
-    const texts = text('collections', entry.id, locale.value)
+    const parent = collectionById(entry.parent_id)
+    const siblings = subItinerariesOf(parent)
+    const texts = text('collections', entry.id, 'en')
     return {
       id: entry.id,
-      name: title(entry, locale.value),
+      parent: parent ? title(parent, 'en') : '',
+      count: siblings.length,
+      name: `${roman(siblings.indexOf(entry) + 1)}. ${title(entry, 'en')}`,
       duration: texts.extra?.duration ?? '',
-      description: excerpt(texts.description, DESCRIPTION_LENGTH),
+      description: legacyLines(legacyCut(String(texts.description ?? '').replace(/\s*\n+\s*/g, ' '), SUB_DESCRIPTION_LENGTH).text),
+      image: itineraryPicture(entry),
       to: subItineraryLink(entry, location.value),
     }
   }),
@@ -207,32 +253,20 @@ const onItineraries = computed(() =>
 
 const tabs = computed(() =>
   [
-    { key: 'description', label: t('sheet.field.description'), shown: true },
-    { key: 'map', label: t('explore.monument.map'), shown: pin.value.length > 0 },
+    { key: 'description', label: t('explore.monument.descriptionTab'), shown: true },
+    { key: 'map', label: t('explore.monument.map'), shown: true },
     { key: 'directions', label: t('explore.monument.directions'), shown: directions.value.length > 0 },
-    {
-      key: 'information',
-      label: t('explore.info.heading'),
-      shown: ['accommodations', 'guidedVisits', 'usefulWebsites'].some((k) => travel.value[k]?.length),
-    },
-    { key: 'related', label: t('record.related.title'), shown: related.value.length + features.value.length > 0 },
+    { key: 'additional', label: t('explore.info.heading'), shown: hasAdditional.value },
+    { key: 'content', label: t('explore.monument.related'), shown: related.value.length > 0 },
     { key: 'itineraries', label: t('explore.monument.itineraries'), shown: onItineraries.value.length > 0 },
   ].filter((tab) => tab.shown),
 )
 const current = ref('description')
 watch(() => props.id, () => { current.value = 'description' })
 
-function move(event, index) {
-  const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0
-  if (!step) return
-  const next = tabs.value[(index + step + tabs.value.length) % tabs.value.length]
-  current.value = next.key
-  event.currentTarget.parentElement.querySelector(`[data-tab="${next.key}"]`)?.focus()
-}
-
 const parentItinerary = computed(() => (sub.value ? collectionById(sub.value.parent_id) : null))
 const crumbs = computed(() => {
-  const context = { theme: theme.value }
+  const context = { theme: theme.value, territory: territory.value }
   const trail = [{ label: t('core.nav.home'), to: { name: 'home' } }]
   if (sub.value) {
     const itineraryCountry = itineraryCountries(parentItinerary.value)[0] ?? country.value
@@ -248,6 +282,7 @@ const crumbs = computed(() => {
   }
   if (theme.value) trail.push({ label: title(theme.value, locale.value), to: themeLink(theme.value) })
   if (country.value) trail.push({ label: title(country.value, locale.value), to: placeLink(country.value, context) })
+  if (territory.value) trail.push({ label: title(territory.value, locale.value), to: placeLink(territory.value, context) })
   if (location.value) trail.push({ label: title(location.value, locale.value), to: placeLink(location.value, context) })
   trail.push({ label: heading.value })
   return trail
@@ -266,108 +301,122 @@ const selection = computed(() =>
         mode: theme.value ? 'theme' : 'country',
         theme: theme.value,
         country: country.value,
-        territory: territoryOf(location.value),
+        territory: territory.value,
         location: location.value,
         monument: monument.value,
       },
-)
-const partnerships = computed(() =>
-  monument.value ? partnershipsFor({ theme: theme.value, level: 'monument', id: monument.value.exploreId }) : [],
 )
 </script>
 
 <template>
   <NotFoundView v-if="!monument" />
   <p v-else-if="!ready" class="explore-loading">{{ t('core.status.loading') }}</p>
-  <ExploreFrame v-else :crumbs="crumbs" :selection="selection" :partnerships="partnerships">
+  <ExploreFrame v-else :crumbs="crumbs" :selection="selection">
     <article class="explore-page explore-monument" @click="onClick">
       <p v-if="fromRoute" class="explore-monument__back">
         <RouterLink :to="routeLink(fromRoute)">{{ t('explore.route.back') }}</RouterLink>
       </p>
       <h1 class="explore-page__title">
-        {{ heading }}<span v-if="place" class="explore-monument__place"> ({{ place }})</span>
+        {{ heading }}<span v-if="place" class="explore-monument__place">({{ place }})</span>
       </h1>
 
-      <div class="explore-tabs" role="tablist" :aria-label="heading">
+      <div class="explore-monument-menu" role="tablist" :aria-label="heading">
         <button
-          v-for="(tab, index) in tabs"
+          v-for="tab in tabs"
           :key="tab.key"
-          :data-tab="tab.key"
           type="button"
           role="tab"
-          class="explore-tabs__tab"
-          :class="{ 'explore-tabs__tab--active': current === tab.key }"
+          class="explore-monument-menu__item"
+          :class="{ 'explore-monument-menu__item--selected': current === tab.key }"
           :aria-selected="current === tab.key ? 'true' : 'false'"
-          :tabindex="current === tab.key ? 0 : -1"
           @click="current = tab.key"
-          @keydown="move($event, index)"
         >{{ tab.label }}</button>
       </div>
 
-      <section v-if="current === 'description' && sheet" class="explore-tabs__panel" role="tabpanel">
-        <p v-if="sheet.source" class="explore-monument__source">{{ sheet.source }}</p>
-        <MediaGallery v-if="sheet.images.length" :images="sheet.images" />
-        <RecordLanguages :languages="languageLabels(languages)" :language="language" @select="select" />
-        <div :dir="dir || undefined">
-          <h2 class="explore-monument__name" v-html="sheet.name"></h2>
-          <dl v-if="sheet.fields.length" class="explore-monument__fields">
-            <template v-for="field in sheet.fields" :key="field.label">
-              <dt>{{ field.label }}</dt>
-              <dd>{{ field.value }}</dd>
-            </template>
-          </dl>
-          <div class="explore-prose" v-html="sheet.description"></div>
-          <template v-if="sheet.history">
-            <h3 class="explore-monument__subheading">{{ t('sheet.field.history') }}</h3>
-            <div class="explore-prose" v-html="sheet.history"></div>
-          </template>
-          <p v-for="entry in sheet.credits" :key="entry.label" class="explore-page__credit">{{ entry.label }}: {{ entry.value }}</p>
-          <template v-if="sheet.bibliography">
-            <h3 class="explore-monument__subheading">{{ t('sheet.field.bibliography') }}</h3>
-            <div class="explore-prose" v-html="sheet.bibliography"></div>
-          </template>
-        </div>
-      </section>
+      <ExploreMap v-if="current === 'map'" :pins="pin" :zoom="position?.zoom ?? placePosition(location)?.zoom ?? null" />
 
-      <section v-if="current === 'map'" class="explore-tabs__panel" role="tabpanel">
-        <ExploreMap :pins="pin" :zoom="position?.zoom ?? placePosition(location)?.zoom ?? null" />
-      </section>
-
-      <section v-if="current === 'directions'" class="explore-tabs__panel" role="tabpanel">
-        <section v-for="entry in directions" :key="entry.key" class="explore-info__section">
-          <h3 class="explore-info__heading">{{ entry.label }}</h3>
-          <div class="explore-prose" v-html="entry.html"></div>
-        </section>
-      </section>
-
-      <section v-if="current === 'information'" class="explore-tabs__panel" role="tabpanel">
-        <AdditionalInformation :travel="travel" open />
-      </section>
-
-      <section v-if="current === 'related'" class="explore-tabs__panel" role="tabpanel">
-        <article v-for="record in related" :key="record.id" class="explore-related">
-          <p class="explore-monument__source">{{ record.source }}</p>
-          <h2 class="explore-monument__name" v-html="record.name"></h2>
-          <MediaGallery v-if="record.images.length" :images="record.images" />
-          <div class="explore-prose" :dir="dir || undefined" v-html="record.description"></div>
-          <p v-if="record.by" class="explore-page__credit">{{ t('sheet.field.preparedBy') }}: {{ record.by }}</p>
-        </article>
-        <SpecialFeatures :features="features" :tr="featureText" :language="language" :glossary="glossary" :dir="dir" />
-      </section>
-
-      <section v-if="current === 'itineraries'" class="explore-tabs__panel" role="tabpanel">
-        <article v-for="entry in onItineraries" :key="entry.id" class="explore-itinerary">
-          <div class="explore-itinerary__body">
-            <h3 class="explore-itinerary__name">
-              <RouterLink :to="entry.to">{{ entry.name }}</RouterLink>
-              <span v-if="entry.duration" class="explore-itinerary__duration"> [{{ entry.duration }}]</span>
-            </h3>
-            <p v-if="entry.description" class="explore-itinerary__description">{{ entry.description }}</p>
+      <div v-if="current === 'description'" class="explore-monument__panel">
+        <div v-for="entry in descriptions" :key="entry.key">
+          <div class="explore-monument__header">
+            <div v-html="entry.name"></div>
+            <div class="explore-monument__source">{{ t('explore.monument.in') }} <span>{{ entry.project }}</span> {{ entry.from }}</div>
           </div>
-        </article>
-      </section>
+          <div class="explore-monument__entry">
+            <MonumentEntry :entry="entry" :language="language" :place="place" :glossary="glossary" @language="readIn" />
+          </div>
+        </div>
+      </div>
 
-      <GlossaryPopover :term="active" :html="activeHtml" :dir="dir" @close="close" />
+      <div v-if="current === 'directions'" class="explore-monument__panel explore-monument__fields">
+        <ReadIn :languages="leadLanguages" :language="language" @select="readIn" />
+        <div v-for="entry in directions" :key="entry.key" class="explore-field">
+          <span class="explore-field__label" :class="{ 'explore-field__label--inline': !entry.block }">{{ entry.label }}<template v-if="!entry.block">: </template></span>
+          <span class="explore-field__value" v-html="entry.html"></span>
+        </div>
+      </div>
+
+      <div v-if="current === 'additional'" class="explore-monument__panel explore-monument__fields">
+        <ReadIn :languages="leadLanguages" :language="language" @select="readIn" />
+        <div v-for="entry in additional.fields" :key="entry.key" class="explore-field">
+          <span class="explore-field__label explore-field__label--inline">{{ entry.label }}: </span>
+          <span class="explore-field__value" v-html="entry.html"></span>
+        </div>
+        <div v-if="additional.accommodations.length" class="explore-additional">
+          <div class="explore-additional__label">{{ t('explore.info.accommodations') }}</div>
+          <div v-for="entry in additional.accommodations" :key="entry.id" class="explore-additional__entry">
+            <div v-for="(line, index) in entry.lines.slice(0, 1)" :key="`n${index}`">{{ line }}</div>
+            <div v-if="entry.category" class="explore-additional__category">{{ entry.category }}</div>
+            <div v-for="(line, index) in entry.lines.slice(1)" :key="index">{{ line }}</div>
+            <div v-if="entry.url"><a :href="entry.url" target="_blank" rel="noopener">{{ entry.url }}</a></div>
+            <div v-if="entry.note">{{ entry.note }}</div>
+          </div>
+        </div>
+        <div v-if="additional.guidedVisits.length" class="explore-additional">
+          <div class="explore-additional__label">{{ t('explore.info.guidedVisits') }}</div>
+          <div v-for="entry in additional.guidedVisits" :key="entry.id" class="explore-additional__entry">
+            <div v-for="(line, index) in entry.lines" :key="index">{{ line }}</div>
+            <div v-if="entry.url"><a :href="entry.url" target="_blank" rel="noopener">{{ entry.url }}</a></div>
+            <div v-if="entry.person">{{ entry.person }}</div>
+            <div v-if="entry.note">{{ entry.note }}</div>
+          </div>
+        </div>
+        <div v-if="additional.websites.length" class="explore-additional">
+          <div class="explore-additional__label">{{ t('explore.info.usefulWebsites') }}</div>
+          <div v-for="site in additional.websites" :key="site.id" class="explore-additional__entry">
+            <div>{{ site.title }}</div>
+            <div v-if="site.url"><a :href="site.url" target="_blank" rel="noopener">{{ site.url }}</a></div>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="current === 'content'" class="explore-monument__panel">
+        <div v-for="(entry, index) in related" :key="entry.key" class="explore-monument__related">
+          <div class="explore-monument__header explore-monument__header--button" role="button" tabindex="0" @click="relatedIndex = index" @keydown.enter="relatedIndex = index">
+            <div v-html="entry.name"></div>
+            <div class="explore-monument__source">{{ t('explore.monument.in') }} <span>{{ entry.project }}</span> {{ entry.from }}</div>
+          </div>
+          <div v-if="relatedIndex === index" class="explore-monument__entry">
+            <MonumentEntry :entry="entry" :language="language" :place="place" :glossary="glossary" @language="readIn" />
+          </div>
+        </div>
+      </div>
+
+      <div v-if="current === 'itineraries'" class="explore-monument__panel">
+        <div v-for="entry in onItineraries" :key="entry.id" class="explore-monument-itinerary">
+          <div class="explore-monument-itinerary__parent">{{ entry.parent }} ({{ entry.count }} {{ t('explore.itinerary.subItineraries') }})</div>
+          <div class="explore-sub-card">
+            <div class="explore-sub-card__image" :style="entry.image ? { backgroundImage: `url(${entry.image})` } : {}"></div>
+            <div class="explore-sub-card__info">
+              <RouterLink class="explore-sub-card__link" :to="entry.to">
+                {{ entry.name }}<template v-if="entry.duration"> [{{ entry.duration }}]</template>
+              </RouterLink>
+              <div v-if="entry.description" class="explore-sub-card__description" v-html="entry.description"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <GlossaryPopover :term="active" :html="activeHtml" @close="close" />
     </article>
   </ExploreFrame>
 </template>

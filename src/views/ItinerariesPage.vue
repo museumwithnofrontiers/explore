@@ -3,8 +3,8 @@ import { computed } from 'vue'
 import { NotFoundView, mdInline, useI18n } from '@museumwnf/viewer-core'
 import ExploreFrame from '../components/ExploreFrame.vue'
 import {
-  collectionById, excerpt, itinerariesIn, itineraryLink, itineraryPicture, legacyId, levelOf, partnershipsFor, text,
-  title, travelFor, recordTexts, useTexts,
+  collectionById, excerpt, itinerariesIn, itinerariesOfTerritory, itineraryLink, itineraryPicture, legacyId, levelOf,
+  text, title, travelFor, recordTexts, useTexts,
 } from '../composables/explore.js'
 
 // A country's itineraries, legacy's "Itineraries in …": each one's picture,
@@ -12,6 +12,8 @@ import {
 // Books and Tours scoped to it.
 const props = defineProps({
   id: { type: String, required: true },
+  /** A territory of the country: its itineraries only, as legacy's `/itineraries/c-…/tr-…`. */
+  territory: { type: String, default: '' },
 })
 const { t, locale } = useI18n()
 const ready = useTexts(['collections', 'countries'])
@@ -24,8 +26,13 @@ const country = computed(() => {
   return levelOf(collection) === 'country' ? collection : null
 })
 
+const territory = computed(() => {
+  const collection = props.territory ? collectionById(props.territory) : null
+  return collection?.type === 'region' ? collection : null
+})
+
 const entries = computed(() =>
-  itinerariesIn(country.value).map((itinerary) => {
+  itinerariesOfTerritory(itinerariesIn(country.value), territory.value).map((itinerary) => {
     const travel = travelFor('itinerary', legacyId(itinerary))
     const titleOf = (record) => mdInline(recordTexts(record, locale.value).title ?? '')
     return {
@@ -52,8 +59,7 @@ const crumbs = computed(() => [
   <ExploreFrame
     v-else
     :crumbs="crumbs"
-    :selection="{ mode: 'itinerary', country }"
-    :partnerships="partnershipsFor({ level: 'country', id: legacyId(country) })"
+    :selection="{ mode: 'itinerary', country, territory }"
   >
     <article class="explore-page">
       <h1 class="explore-page__title">{{ t('explore.itinerary.inCountry') }} {{ title(country, locale) }}</h1>
@@ -64,14 +70,14 @@ const crumbs = computed(() => [
           <p v-if="entry.description" class="explore-itinerary__description">{{ entry.description }}</p>
           <RouterLink class="explore-button" :to="entry.to">{{ t('explore.itinerary.readMore') }}</RouterLink>
           <template v-if="entry.books.length">
-            <h3 class="explore-itinerary__label">{{ t('explore.travel.books') }}</h3>
+            <h3 class="explore-itinerary__label">{{ t(entry.books.length > 1 ? 'explore.travel.books' : 'explore.travel.book') }}</h3>
             <p v-for="book in entry.books" :key="book.id" class="explore-itinerary__record">
               <a v-if="book.href" :href="book.href" target="_blank" rel="noopener" v-html="book.title"></a>
               <span v-else v-html="book.title"></span>
             </p>
           </template>
           <template v-if="entry.tours.length">
-            <h3 class="explore-itinerary__label">{{ t('explore.travel.tours') }}</h3>
+            <h3 class="explore-itinerary__label">{{ t(entry.tours.length > 1 ? 'explore.travel.tours' : 'explore.travel.tour') }}</h3>
             <p v-for="tour in entry.tours" :key="tour.id" class="explore-itinerary__record">
               <a v-if="tour.href" :href="tour.href" target="_blank" rel="noopener" v-html="tour.title"></a>
               <span v-else v-html="tour.title"></span>

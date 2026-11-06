@@ -1,29 +1,34 @@
 <script setup>
 import { computed } from 'vue'
-import { NotFoundView, languageLabels, md, useI18n, useRecordLanguage } from '@museumwnf/viewer-core'
-import { RecordLanguages } from '@museumwnf/viewer-layout/content'
+import { NotFoundView, mdInline, useI18n, useRecordLanguage } from '@museumwnf/viewer-core'
 import ExploreFrame from '../components/ExploreFrame.vue'
 import ExploreMap from '../components/ExploreMap.vue'
 import LocalTeam from '../components/LocalTeam.vue'
+import ReadIn from '../components/ReadIn.vue'
+import ReadMoreText from '../components/ReadMoreText.vue'
 import TravelRecords from '../components/TravelRecords.vue'
 import {
-  collectionById, excerpt, itineraryCountries, itineraryLocations, itineraryPicture, itinerariesLink, legacyId,
-  partnershipsFor, placePosition, subItinerariesOf, subItineraryLink, text, title, travelFor, useCollectionLanguages,
-  useTexts,
+  collectionById, describedLanguages, itineraryCountries, itineraryLocations, itineraryPicture, itinerariesLink,
+  legacyCut, legacyId, placePosition, roman, subItinerariesOf, subItineraryLink, text, title, travelFor,
+  useCollectionLanguages, useTexts,
 } from '../composables/explore.js'
 
-// A thematic itinerary's page: its map, each sub-itinerary at its first
-// location; its introduction, in any language it is written in; its
-// sub-itineraries, counted, each its picture, its name and duration, and the
-// start of its text; its local team; its Travel Books and Tours.
+// A thematic itinerary's page, as legacy's SubItineraryList: its map, each
+// sub-itinerary at its first location; "Read in" the languages its
+// introduction is written in, the introduction cut at legacy's length with
+// "Read more."; its sub-itineraries, counted, each a card with its picture,
+// its numeral, name and duration, and the start of its text; its local team;
+// its Travel Books and Tours (inventory-app#2424).
 const props = defineProps({
   id: { type: String, required: true },
 })
 const { t, locale } = useI18n()
 const ready = useTexts(['collections', 'countries', 'items'])
 
-// Legacy cut a sub-itinerary's text in this list at this many characters.
-const DESCRIPTION_LENGTH = 400
+// Legacy cut the introduction at this many characters, a sub-itinerary's
+// text in the list at that many.
+const DESCRIPTION_LENGTH = 575
+const SUB_DESCRIPTION_LENGTH = 400
 
 const itinerary = computed(() => {
   const collection = collectionById(props.id)
@@ -31,20 +36,23 @@ const itinerary = computed(() => {
     ? collection
     : null
 })
-const languages = useCollectionLanguages(() => itinerary.value)
+const translated = useCollectionLanguages(() => itinerary.value)
+const languages = computed(() => describedLanguages(translated.value, itinerary.value?.id))
 const { language, select, dir } = useRecordLanguage(itinerary, { languages: () => languages.value })
 const own = computed(() => text('collections', itinerary.value?.id, language.value))
-const description = computed(() => md(own.value.description))
+
+// Legacy showed a sub-itinerary's text on one line: its line breaks as spaces.
+const oneLine = (markdown) => mdInline(String(markdown ?? '').replace(/\s*\n+\s*/g, ' '))
 
 const subs = computed(() =>
-  subItinerariesOf(itinerary.value).map((sub) => {
+  subItinerariesOf(itinerary.value).map((sub, index) => {
     const texts = text('collections', sub.id, locale.value)
     return {
       id: sub.id,
       sub,
-      name: title(sub, locale.value),
+      name: `${roman(index + 1)}. ${title(sub, locale.value)}`,
       duration: texts.extra?.duration ?? '',
-      description: excerpt(texts.description, DESCRIPTION_LENGTH),
+      description: oneLine(legacyCut(texts.description, SUB_DESCRIPTION_LENGTH).text),
       image: itineraryPicture(sub),
       to: subItineraryLink(sub),
     }
@@ -76,24 +84,22 @@ const crumbs = computed(() => {
     v-else
     :crumbs="crumbs"
     :selection="{ mode: 'itinerary', country, itinerary }"
-    :partnerships="partnershipsFor({ level: 'itinerary', id: legacyId(itinerary) })"
   >
     <article class="explore-page">
-      <h1 class="explore-page__title" :dir="dir || undefined">{{ title(itinerary, language) }}</h1>
+      <h1 class="explore-page__title">{{ title(itinerary, 'en') }}</h1>
       <ExploreMap v-if="pins.length" :pins="pins" />
-      <RecordLanguages :languages="languageLabels(languages)" :language="language" @select="select" />
-      <div v-if="description" class="explore-page__text explore-prose" :dir="dir || undefined" v-html="description"></div>
+      <ReadIn :languages="languages" :language="language" @select="select" />
+      <ReadMoreText class="explore-page__text" :text="own.description ?? ''" :chars="DESCRIPTION_LENGTH" :dir="dir" />
 
       <section v-if="subs.length" class="explore-subs">
         <h2 class="explore-subs__heading">{{ subs.length }} {{ t('explore.itinerary.subItineraries') }}</h2>
-        <article v-for="entry in subs" :key="entry.id" class="explore-itinerary">
-          <img v-if="entry.image" class="explore-itinerary__image" :src="entry.image" alt="" loading="lazy" />
-          <div class="explore-itinerary__body">
-            <h3 class="explore-itinerary__name">
-              <RouterLink :to="entry.to">{{ entry.name }}</RouterLink>
-              <span v-if="entry.duration" class="explore-itinerary__duration"> [{{ entry.duration }}]</span>
-            </h3>
-            <p v-if="entry.description" class="explore-itinerary__description">{{ entry.description }}</p>
+        <article v-for="entry in subs" :key="entry.id" class="explore-sub-card">
+          <div class="explore-sub-card__image" :style="entry.image ? { backgroundImage: `url(${entry.image})` } : {}"></div>
+          <div class="explore-sub-card__info">
+            <RouterLink class="explore-sub-card__link" :to="entry.to">
+              {{ entry.name }}<template v-if="entry.duration"> [{{ entry.duration }}]</template>
+            </RouterLink>
+            <div v-if="entry.description" class="explore-sub-card__description" v-html="entry.description"></div>
           </div>
         </article>
       </section>

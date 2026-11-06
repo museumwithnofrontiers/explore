@@ -1,19 +1,20 @@
 <script setup>
 import { computed } from 'vue'
-import { NotFoundView, languageLabels, md, useI18n, useRecordLanguage } from '@museumwnf/viewer-core'
-import { RecordLanguages } from '@museumwnf/viewer-layout/content'
-import AdditionalInformation from '../components/AdditionalInformation.vue'
+import { NotFoundView, md, useI18n, useRecordLanguage } from '@museumwnf/viewer-core'
 import ExploreFrame from '../components/ExploreFrame.vue'
 import ExploreMap from '../components/ExploreMap.vue'
 import ExploreTiles from '../components/ExploreTiles.vue'
+import PlaceMenu from '../components/PlaceMenu.vue'
+import ReadIn from '../components/ReadIn.vue'
 import TravelRecords from '../components/TravelRecords.vue'
 import {
-  byTitle, collectionById, countryPicture, legacyId, partnershipsFor, placeLink, placePosition, text, themeCountries,
-  title, travelFor, useCollectionLanguages, useTexts,
+  byTitle, collectionById, countryPicture, legacyId, placeLink, placePosition,
+  themeCountries, ownText, title, travelFor, useCollectionLanguages, useTexts,
 } from '../composables/explore.js'
 
-// A theme's page: its introduction, in any language it is written in, then
-// its countries on their pictures, and the travel records scoped to the theme.
+// A theme's page, as legacy's ExplorePage: its name in English; its
+// introduction in full, "Read in" the languages it is written in; then its
+// countries on their pictures, and the travel records scoped to the theme.
 const props = defineProps({
   id: { type: String, required: true },
 })
@@ -24,11 +25,14 @@ const theme = computed(() => {
   const collection = collectionById(props.id)
   return collection?.type === 'theme' ? collection : null
 })
+// Legacy offered every language the theme has a row in, its introduction
+// empty in some.
 const languages = useCollectionLanguages(() => theme.value)
 const { language, select, dir } = useRecordLanguage(theme, { languages: () => languages.value })
 
-const name = computed(() => title(theme.value, language.value))
-const description = computed(() => md(text('collections', theme.value?.id, language.value).description))
+const name = computed(() => title(theme.value, 'en'))
+// Each language's own row: legacy showed an empty introduction empty.
+const description = computed(() => md(ownText('collections', theme.value?.id, language.value).description))
 
 const countryTiles = computed(() =>
   [...themeCountries(theme.value)].sort(byTitle(locale.value)).map((country) => ({
@@ -56,15 +60,20 @@ const crumbs = computed(() => [{ label: t('core.nav.home'), to: { name: 'home' }
     v-else
     :crumbs="crumbs"
     :selection="{ mode: 'theme', theme }"
-    :partnerships="partnershipsFor({ theme })"
   >
     <article class="explore-page">
-      <h1 class="explore-page__title" :dir="dir || undefined">{{ name }}</h1>
-      <RecordLanguages :languages="languageLabels(languages)" :language="language" @select="select" />
-      <div class="explore-page__text explore-prose" :dir="dir || undefined" v-html="description"></div>
+      <h1 class="explore-page__title">{{ name }}</h1>
+      <!-- Legacy named a theme covering a single country again under its name. -->
+      <div v-if="themeCountries(theme).length === 1" class="explore-theme-info">
+        <div class="explore-territories">{{ name }}</div>
+      </div>
+      <div class="explore-description">
+        <ReadIn :languages="languages" :language="language" @select="select" />
+        <div class="explore-page__text explore-prose" :dir="dir || undefined" v-html="description"></div>
+      </div>
+      <PlaceMenu :travel="travel" />
       <ExploreMap v-if="pins.length" :pins="pins" :zoom="placePosition(theme)?.zoom ?? null" />
       <ExploreTiles :heading="t('explore.next.country')" :tiles="countryTiles" />
-      <AdditionalInformation :travel="travel" />
       <TravelRecords :books="travel.books" :tours="travel.tours" />
     </article>
   </ExploreFrame>
