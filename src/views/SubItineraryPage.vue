@@ -59,7 +59,9 @@ const language = computed(() =>
 const dir = computed(() => (isRtl(language.value) ? 'rtl' : ''))
 const own = computed(() => ownText('collections', itinerary.value?.id, language.value))
 const english = computed(() => text('collections', itinerary.value?.id, 'en'))
-const author = computed(() => own.value.extra?.author ?? '')
+// Legacy credits a text taken from a Travels itinerary to that itinerary's
+// author (`travels_author`, empty when it names none), Explore's own to Explore's.
+const author = computed(() => own.value.extra?.travels_author ?? own.value.extra?.author ?? '')
 
 const locations = computed(() => itineraryLocations(itinerary.value))
 const location = computed(
