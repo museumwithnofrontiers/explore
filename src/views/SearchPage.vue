@@ -127,7 +127,7 @@ watch(() => [props.type, query.value], async () => {
             <p>{{ focus.place }}<span v-if="focus.project">, {{ t('explore.search.in') }} <span class="explore-search-results__project">{{ focus.project }}</span> {{ focus.from }}</span></p>
           </div>
           <div class="explore-search-results__list">
-            <div v-for="hit in shown" :key="hit.record.id" class="explore-search-results__result">
+            <div v-for="hit in shown" :key="`${hit.origin}:${hit.record.id}`" class="explore-search-results__result">
               <component :is="hit.link?.to ? 'RouterLink' : 'a'" :to="hit.link?.to" :href="hit.link?.href" target="_blank" rel="noopener" class="explore-search-results__image">
                 <img :src="hit.image" alt="" @mouseover="focus = hit" />
               </component>

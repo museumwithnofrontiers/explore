@@ -6,6 +6,7 @@ import ExploreFrame from '../components/ExploreFrame.vue'
 import ExploreMap from '../components/ExploreMap.vue'
 import ExploreTiles from '../components/ExploreTiles.vue'
 import LocalTeam from '../components/LocalTeam.vue'
+import PhoneChevron from '../components/PhoneChevron.vue'
 import LocationBackground from '../components/LocationBackground.vue'
 import ReadIn from '../components/ReadIn.vue'
 import ReadMoreText from '../components/ReadMoreText.vue'
@@ -16,6 +17,7 @@ import {
   placePosition, positionOf, roman, routeKind, subItinerariesOf, text, title, travelFor, useCollectionLanguages,
   useTexts,
 } from '../composables/explore.js'
+import { usePhoneTabs } from '../composables/phoneTabs.js'
 
 // A sub-itinerary's page, and a route's: legacy draws both with one
 // component (explore-client SubItinerary.vue). Its name in English, a
@@ -98,6 +100,9 @@ const pins = computed(() =>
   }),
 )
 
+// Below 900px legacy folded the location tabs to the chosen one.
+const phone = usePhoneTabs()
+
 // Legacy's arrows scrolled the tabs by one tab and its margins.
 const tabsBox = ref(null)
 function scrollTabs(direction) {
@@ -175,16 +180,18 @@ const selection = computed(() =>
           </button>
         </template>
         <div ref="tabsBox" class="explore-sub__tabs" role="tablist">
-          <button
-            v-for="entry in locations"
-            :key="entry.id"
-            type="button"
-            role="tab"
-            class="explore-sub__tab"
-            :class="{ 'explore-sub__tab--active': entry.id === location?.id }"
-            :aria-selected="entry.id === location?.id ? 'true' : 'false'"
-            @click="pick(entry)"
-          >{{ title(entry, 'en').toUpperCase() }}</button>
+          <template v-for="entry in locations" :key="entry.id">
+            <button
+              v-if="phone.shown(entry.id === location?.id)"
+              type="button"
+              role="tab"
+              class="explore-sub__tab"
+              :class="{ 'explore-sub__tab--active': entry.id === location?.id }"
+              :aria-selected="entry.id === location?.id ? 'true' : 'false'"
+              :aria-expanded="phone.chevron(entry.id === location?.id, locations.length) ? String(phone.open.value) : undefined"
+              @click="phone.tap(entry.id === location?.id, () => pick(entry))"
+            >{{ title(entry, 'en').toUpperCase() }}<PhoneChevron :direction="phone.chevron(entry.id === location?.id, locations.length)" /></button>
+          </template>
         </div>
       </div>
 
