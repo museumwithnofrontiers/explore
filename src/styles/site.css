@@ -737,10 +737,13 @@
 .explore-sub__arrow--left { left: 0; }
 .explore-sub__arrow--right { right: 0; }
 @media only screen and (max-width: 899px) {
+  .explore-sub__tabs-wrap { padding: 0; border-bottom: 0; }
   .explore-sub__arrow { display: none; }
   .explore-sub__tabs { flex-direction: column; overflow: visible; }
-  .explore-sub__tab { width: 100%; flex-basis: auto; margin: 5px 0 0; }
+  .explore-sub__tab { width: 100%; flex-basis: auto; margin: 5px 0 0; border-bottom-color: #e2e2e2; }
+  .explore-sub__tab--active { border-bottom-color: var(--explore-green); }
 }
+.explore-phone-chevron { margin-left: 10px; }
 .explore-sub__tab {
   display: flex;
   flex: 0 0 150px;

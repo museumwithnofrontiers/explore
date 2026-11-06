@@ -6,6 +6,7 @@ import {
 import { catalogues as sharedTexts } from '@museumwnf/viewer-i18n/standalone'
 import ownTexts from '../locales/en.json'
 import config from '../src/dataset.config.js'
+import { searchRecords } from '../src/composables/explore.js'
 import { bannerImage, partnershipLogo } from '../src/composables/chrome.js'
 import newThemes from '../src/config/new-themes.json'
 
@@ -361,6 +362,52 @@ describe('website smoke test', () => {
     await vi.waitFor(() => expect(itinerary.router.currentRoute.value.name).toBe('sub-itinerary'), { timeout: 30000 })
     expect(itinerary.router.currentRoute.value.params.id).toBe(sub.id)
     itinerary.app.unmount()
+  }, 60000)
+
+  // Legacy's MWNF Database Search (explore-api SearchController): Explore's
+  // own text about another database's record is a result of its own, from
+  // "Explore", beside that record's.
+  it("finds Explore's own texts as results of their own, as legacy's search did", async () => {
+    // The page loads the records and their English texts the search reads.
+    const { app } = await mountOn('#/search/mwnf?q=palace', '.explore-search-results__result')
+
+    const hits = searchRecords('palace')
+    const chigi = hits.filter((hit) => hit.record.backward_compatibility === 'mwnf3:monuments:BAR:it:Mon13:14')
+    expect(chigi.map((hit) => [hit.origin, hit.name]).sort()).toEqual([
+      ['explore', 'Chigi Palace'],
+      ['virtual-museum', 'Palazzo Chigi'],
+    ])
+    // Legacy's order: "<count>-<text>" compared as a string, descending.
+    const keys = hits.map((hit) => hit.key)
+    expect(keys).toEqual([...keys].sort((a, b) => (a < b ? 1 : a > b ? -1 : 0)))
+
+    app.unmount()
+  }, 60000)
+
+  // Below 900px legacy folded the monument's tabs to the chosen one, with a
+  // chevron; tapping it listed them all, and choosing one folded them again.
+  it('folds the monument tabs to the chosen one on a phone', async () => {
+    const original = globalThis.window.matchMedia
+    globalThis.window.matchMedia = (query) => ({
+      matches: query.includes('899'), media: query, addEventListener: () => {}, removeEventListener: () => {},
+    })
+    try {
+      const [items] = await loadEntities(['items'])
+      const toledo = await collection('mwnf3_explore:location:337')
+      const trails = items.find((i) => i.backward_compatibility === 'mwnf3_travels:monument:IAM:es:1:IX:1:b')
+      const { app, host } = await mountOn(`#/monument/${trails.id}?location=${toledo.id}`, '.explore-entry')
+
+      expect(texts(host, '.explore-monument-menu__item')).toEqual(['DESCRIPTION'])
+      expect(host.querySelector('.explore-phone-chevron')).not.toBeNull()
+      host.querySelector('.explore-monument-menu__item').click()
+      await vi.waitFor(() => expect(host.querySelectorAll('.explore-monument-menu__item').length).toBe(6))
+      host.querySelectorAll('.explore-monument-menu__item')[1].click()
+      await vi.waitFor(() => expect(texts(host, '.explore-monument-menu__item')).toEqual(['MAP']))
+
+      app.unmount()
+    } finally {
+      globalThis.window.matchMedia = original
+    }
   }, 60000)
 
   // The itineraries, against legacy's API (`/itineraries/…`): its 12 thematic

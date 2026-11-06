@@ -846,11 +846,34 @@ export function searchRecords(query) {
     const origin = SEARCH_ORIGINS.find(([prefix]) => String(record.backward_compatibility).startsWith(prefix))?.[1]
     if (!origin || !(record.images?.length > 0)) continue
     const texts = english[record.id]
+    const place = () => {
+      const location = recordPlaces.value.get(record.id) ?? null
+      const monument = location ? monumentsOf(location).find((m) => [m.main, ...m.related].some((r) => r.id === record.id)) ?? null : null
+      return { location, country: location ? countryOf(location) : null, monument }
+    }
+    // Explore's own text about a record of another database (its `explore`
+    // row) was a record of its own in legacy's search, an "Explore" result
+    // beside the record's: legacy searched the Explore monuments' texts that
+    // have a description.
+    const own = texts?.explore
+    if (origin !== 'explore' && String(own?.description ?? '').trim()) {
+      const ownHaystack = searchText(own)
+      const ownCount = ownHaystack.split(term).length - 1
+      if (ownCount > 0) {
+        hits.push({
+          record,
+          origin: 'explore',
+          key: `${ownCount}-${ownHaystack}`,
+          name: String(own.name ?? texts?.name ?? record.internal_name ?? '').trim(),
+          date: '',
+          project: '',
+          ...place(),
+        })
+      }
+    }
     const haystack = searchText(texts)
     const count = haystack.split(term).length - 1
     if (count === 0) continue
-    const location = recordPlaces.value.get(record.id) ?? null
-    const monument = location ? monumentsOf(location).find((m) => [m.main, ...m.related].some((r) => r.id === record.id)) ?? null : null
     const trail = origin === 'trails' ? manifest.trail_projects?.[String(record.backward_compatibility).split(':')[2]] : null
     // Legacy named an Explore record's project by the source word itself (SearchPage).
     const project = origin === 'explore' ? '' : (trail?.name?.en ?? manifest.projects?.[record.project_id]?.name?.en ?? '')
@@ -860,10 +883,8 @@ export function searchRecords(query) {
       key: `${count}-${haystack}`,
       name: String(texts?.name ?? record.internal_name ?? '').trim(),
       date: String(texts?.dates ?? '').trim(),
-      location,
-      country: location ? countryOf(location) : null,
       project,
-      monument,
+      ...place(),
     })
   }
   return hits.sort((a, b) => (a.key < b.key ? 1 : a.key > b.key ? -1 : a.name.toLowerCase().localeCompare(b.name.toLowerCase())))

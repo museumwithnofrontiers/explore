@@ -8,6 +8,8 @@ import { GlossaryPopover } from '@museumwnf/viewer-layout/content'
 import ExploreFrame from '../components/ExploreFrame.vue'
 import ExploreMap from '../components/ExploreMap.vue'
 import MonumentEntry from '../components/MonumentEntry.vue'
+import PhoneChevron from '../components/PhoneChevron.vue'
+import { usePhoneTabs } from '../composables/phoneTabs.js'
 import ReadIn from '../components/ReadIn.vue'
 import {
   byLanguage, collectionById, countryOf, detailsOf, findMonument, isSubItinerary, itinerariesLink, itinerariesOf,
@@ -264,6 +266,8 @@ const tabs = computed(() =>
   ].filter((tab) => tab.shown),
 )
 const current = ref('description')
+// Below 900px legacy folded the tabs to the chosen one.
+const phone = usePhoneTabs()
 watch(() => props.id, () => { current.value = 'description' })
 
 const parentItinerary = computed(() => (sub.value ? collectionById(sub.value.parent_id) : null))
@@ -323,16 +327,18 @@ const selection = computed(() =>
       </h1>
 
       <div class="explore-monument-menu" role="tablist" :aria-label="heading">
-        <button
-          v-for="tab in tabs"
-          :key="tab.key"
-          type="button"
-          role="tab"
-          class="explore-monument-menu__item"
-          :class="{ 'explore-monument-menu__item--selected': current === tab.key }"
-          :aria-selected="current === tab.key ? 'true' : 'false'"
-          @click="current = tab.key"
-        >{{ tab.label }}</button>
+        <template v-for="tab in tabs" :key="tab.key">
+          <button
+            v-if="phone.shown(current === tab.key)"
+            type="button"
+            role="tab"
+            class="explore-monument-menu__item"
+            :class="{ 'explore-monument-menu__item--selected': current === tab.key }"
+            :aria-selected="current === tab.key ? 'true' : 'false'"
+            :aria-expanded="phone.chevron(current === tab.key, tabs.length) ? String(phone.open.value) : undefined"
+            @click="phone.tap(current === tab.key, () => { current = tab.key })"
+          >{{ tab.label }}<PhoneChevron :direction="phone.chevron(current === tab.key, tabs.length)" /></button>
+        </template>
       </div>
 
       <ExploreMap v-if="current === 'map'" :pins="pin" :zoom="position?.zoom ?? placePosition(location)?.zoom ?? null" />
