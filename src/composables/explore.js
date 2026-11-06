@@ -1,5 +1,5 @@
 import { computed, reactive, watch } from 'vue'
-import { entityRef, loadEntities, mdStrip, useDataPackage, useI18n, useSiteConfig } from '@museumwnf/viewer-core'
+import { entityRef, loadEntities, mdInline, mdStrip, siblingSiteUrl, useDataPackage, useI18n, useSiteConfig } from '@museumwnf/viewer-core'
 import newThemes from '../config/new-themes.json'
 
 // Explore's records, read the one way every website reads them: lazily, each
@@ -41,6 +41,12 @@ export function loadTexts(entities, lang) {
   )
 }
 
+/** One record's own row in `lang`, nothing taken from English: legacy's monument texts. */
+export function ownText(entity, id, lang) {
+  loaded.has(`${entity}:${lang}`)
+  return pkg.tr(entity, id, lang)
+}
+
 /**
  * One record's texts in `lang`, field by field English where it has none in
  * that language: a theme's Spanish row carries its name and no introduction,
@@ -56,6 +62,67 @@ export function text(entity, id, lang) {
 }
 
 /** A text's first `length` characters, as plain text: legacy cut its cards' and lists' texts so. */
+// Legacy's texts reached its client as plain text, each line break written
+// `<br/>` and a new line; its `truncate` cut that string at the last space
+// before `chars` and added "...". The cut is taken here on that same form of
+// the Markdown text, so it falls where legacy's fell (inventory-app#2424).
+const LEGACY_BREAK = '<br/>\n'
+
+/** `{ text, cut }`: the Markdown text cut as legacy cut it at `chars`, `cut` false when it fits. */
+export function legacyCut(value, chars) {
+  const markdown = String(value ?? '').replace(/\r\n/g, '\n').replace(/ {2,}\n/g, '\n').trim()
+  const raw = markdown.split('\n').join(LEGACY_BREAK)
+  if (raw.length <= chars) return { text: markdown, cut: false }
+  const slice = `${raw.substring(0, raw.lastIndexOf(' ', chars))}...`
+  return { text: slice.split(LEGACY_BREAK).join('\n'), cut: true }
+}
+
+/** The text as legacy printed it, its line breaks kept (`<br>`), inline Markdown rendered. */
+export function legacyLines(markdown, options = {}) {
+  return String(markdown ?? '').split('\n').map((line) => mdInline(line, options)).join('<br>\n')
+}
+
+const ROMAN = [[1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'], [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']]
+/** Legacy's `subItineraryOrderRoman`: 1 → "I". */
+export function roman(n) {
+  let rest = n
+  return ROMAN.reduce((out, [value, digits]) => {
+    while (rest >= value) {
+      out += digits
+      rest -= value
+    }
+    return out
+  }, '')
+}
+
+/** The languages among `codes` a collection has a description in: legacy's "Read in" list. */
+export function describedLanguages(codes, id) {
+  return codes.filter(
+    (code) =>
+      loaded.has(`collections:${code}`) &&
+      String(pkg.translations('collections', code)[id]?.description ?? '').trim() !== '',
+  )
+}
+
+/** The site's content languages, the collections' texts loading in each: what a "Read in" may offer. */
+export function useContentLanguages() {
+  const config = useSiteConfig()
+  const codes = config.contentLanguages ?? config.languages ?? ['en']
+  for (const code of codes) loadTexts(['collections'], code)
+  return codes
+}
+
+/**
+ * The collections a location's historical background reads, in legacy's
+ * order (explore-api Location::getHistoricalBackground): the location's own
+ * text, then the Travels locations whose introductions it names.
+ */
+export function backgroundSources(location) {
+  if (location?.type !== 'location') return []
+  const travels = (location.extra?.historical_background ?? []).map((key) => tree.value.byKey.get(key)?.id)
+  return [location.id, ...travels.filter(Boolean)]
+}
+
 export function excerpt(value, length) {
   const plain = mdStrip(value ?? '')
   return plain.length > length ? `${plain.slice(0, length).trimEnd()}...` : plain
@@ -67,7 +134,8 @@ export function excerpt(value, length) {
  * text in whichever the visitor picks.
  */
 export function useCollectionLanguages(getCollection) {
-  const codes = useSiteConfig().languages ?? ['en']
+  const config = useSiteConfig()
+  const codes = config.contentLanguages ?? config.languages ?? ['en']
   for (const code of codes) loadTexts(['collections'], code)
   return computed(() => {
     const id = getCollection()?.id
@@ -335,29 +403,6 @@ export function positionOf(monument) {
   return null
 }
 
-/**
- * A location's historical background: Explore's own text, signed by its
- * `prepared_by`, then each Travels location's introduction it names, signed by
- * its author.
- */
-export function locationBackground(location, lang) {
-  if (location?.type !== 'location') return []
-  const own = text('collections', location.id, lang)
-  const texts = []
-  if (own.description) texts.push({ key: 'own', text: own.description, by: own.extra?.prepared_by ?? '' })
-  for (const key of location.extra?.historical_background ?? []) {
-    const travels = tree.value.byKey.get(key)
-    const travelsText = travels ? text('collections', travels.id, lang) : {}
-    if (travelsText.description) {
-      texts.push({
-        key,
-        text: travelsText.description,
-        by: travelsText.extra?.author || travelsText.extra?.prepared_by || '',
-      })
-    }
-  }
-  return texts
-}
 
 /** A collection's own position: a country's, a territory's or a location's. */
 export function placePosition(collection) {
@@ -420,6 +465,45 @@ export function shownTerritories(country, context = {}) {
   return territoriesOf(country).filter((t) => shownLocations(t, context).length > 0)
 }
 
+const allTerritories = () => (collections.value ?? []).filter((c) => c.type === 'region')
+const itineraryTerritoryIds = (itinerary) =>
+  (text('collections', itinerary?.id, 'en').extra?.territory_ids ?? []).map(String)
+
+/**
+ * The territories the selection panel lists, as legacy's explore-api answers
+ * them (inventory-app#2424); the panel draws its Territories step only when
+ * there are some.
+ *   theme path      `/territories?t&c`: the country's territories (every one,
+ *                   with no country) linked to the theme (`regionsthemes`, the
+ *                   territory's `theme_ids`);
+ *   country path    `/territories?c&f`: the country's territories, with a
+ *                   filter those holding a location of that kind;
+ *   itinerary path  `/itineraries/territories?c&i`: the country's territories
+ *                   that have itineraries (`explore_itineraries_rel_territory`,
+ *                   the itinerary's `territory_ids`), the itinerary's own when
+ *                   one is chosen.
+ */
+export function panelTerritories({ mode, theme = null, country = null, filter = null, itinerary = null }) {
+  const pool = country ? territoriesOf(country) : allTerritories()
+  if (mode === 'theme') {
+    if (!theme) return pool
+    const id = legacyId(theme)
+    return pool.filter((t) => (text('collections', t.id, 'en').extra?.theme_ids ?? []).map(String).includes(id))
+  }
+  if (mode === 'itinerary') {
+    // Legacy's explore_itineraries holds the sub-itineraries too, and they
+    // carry most of the links; a chosen itinerary answers for its own and its
+    // sub-itineraries' (legacy's fallback, its `regionId` list).
+    const records = itinerary
+      ? [itinerary, ...childrenOf(itinerary.id)]
+      : (collections.value ?? []).filter((c) => String(c.backward_compatibility).startsWith('mwnf3_explore:itinerary:'))
+    const linked = new Set(records.flatMap(itineraryTerritoryIds))
+    return pool.filter((t) => linked.has(legacyId(t)))
+  }
+  if (!filter) return pool
+  return pool.filter((t) => locationsUnder(t).some((l) => monumentsOf(l).some((m) => filtersOf(m).includes(filter))))
+}
+
 /** The countries a theme covers (`country_ids` on its English translation). */
 export function themeCountries(theme) {
   const codes = text('collections', theme?.id, 'en').extra?.country_ids ?? []
@@ -432,6 +516,13 @@ export function themeCountryText(theme, country, lang) {
   const code = legacyId(country)
   const ofCountry = texts.filter((t) => t.countryId === code)
   return (ofCountry.find((t) => t.langId === lang) ?? ofCountry.find((t) => t.langId === 'en'))?.text ?? ''
+}
+
+/** The languages the theme's text about a country is written in: that page's "Read in". */
+export function themeCountryLanguages(theme, country) {
+  const texts = text('collections', theme?.id, 'en').extra?.country_texts ?? []
+  const code = legacyId(country)
+  return [...new Set(texts.filter((t) => t.countryId === code).map((t) => t.langId))]
 }
 
 /**
@@ -602,8 +693,15 @@ export function routeLink(route) {
   return { name: 'route', params: { id: route.id } }
 }
 
-export function itinerariesLink(country) {
-  return { name: 'itineraries', params: { id: country.id } }
+export function itinerariesLink(country, territory = null) {
+  return { name: 'itineraries', params: { id: country.id }, query: territory ? { territory: territory.id } : {} }
+}
+
+/** The itineraries of a territory (`explore_itineraries_rel_territory`), among `list`. */
+export function itinerariesOfTerritory(list, territory) {
+  if (!territory) return list
+  const id = legacyId(territory)
+  return list.filter((i) => [i, ...childrenOf(i.id)].some((r) => itineraryTerritoryIds(r).includes(id)))
 }
 
 // ── Site records ─────────────────────────────────────────────────────────
@@ -671,6 +769,117 @@ export function partnershipsFor({ home = false, theme = null, level = null, id =
   )
 }
 
+/**
+ * The featured partnerships under "Make Your Selection", as legacy's
+ * SideNavigation gathered them (inventory-app#2424): those scoped to each step
+ * of the path the panel shows — the theme, the country, the territory, the
+ * itinerary, the location, in that order — each partnership once.
+ */
+export function pathPartnerships({ theme = null, country = null, territory = null, itinerary = null, location = null } = {}) {
+  const all = siteRecords.value.explore_home?.featured_partnerships ?? []
+  const steps = [
+    ['theme', theme],
+    ['country', country],
+    ['territory', territory],
+    ['itinerary', itinerary],
+    ['location', location],
+  ].filter(([, record]) => record)
+  const seen = new Set()
+  const out = []
+  for (const [level, record] of steps) {
+    for (const p of all.filter((x) => scoped(x, level, legacyId(record)))) {
+      if (!seen.has(p.id)) out.push(p)
+      seen.add(p.id)
+    }
+  }
+  return out
+}
+
+// ── Search: legacy's "MWNF Database Search" ─────────────────────────────────
+
+// explore-api's SearchController (inventory-app#2424) searched four tables,
+// each record a result of its own: Explore's monuments, then the Virtual
+// Museum's, Sharing History's and the Exhibition Trails' monuments that are
+// tied to an Explore monument (`exploremonument_vm` and the like) — the very
+// records this package holds. A record matched when its English text holds
+// the term, and had to have a picture; the results ran by the number of times
+// the term appears (compared as text, as legacy's sort did), then by name,
+// twenty-four a page.
+export const SEARCH_PAGE_SIZE = 24
+const SEARCH_ORIGINS = [
+  ['mwnf3_explore:monument:', 'explore'],
+  ['mwnf3:monuments:', 'virtual-museum'],
+  ['mwnf3_sharing_history:sh_monuments:', 'sharing-history'],
+  ['mwnf3_travels:monument:', 'trails'],
+]
+
+function searchText(texts) {
+  return Object.entries(texts ?? {})
+    .filter(([key, value]) => key !== 'explore' && (typeof value === 'string' || Array.isArray(value)))
+    .map(([, value]) => [value].flat().filter((v) => typeof v === 'string').join(' '))
+    .join(' ')
+    .toLowerCase()
+}
+
+/** Where each record is shown in Explore: its location and its monument there. */
+const recordPlaces = computed(() => {
+  const places = new Map()
+  for (const location of (collections.value ?? []).filter((c) => c.type === 'location')) {
+    for (const member of location.items ?? []) {
+      if (!places.has(member.id)) places.set(member.id, location)
+    }
+  }
+  return places
+})
+
+/**
+ * Legacy's search results for `query`: `{ record, origin, name, location,
+ * country, project, from, monument }`, sorted as legacy sorted them.
+ */
+export function searchRecords(query) {
+  const term = String(query ?? '').trim().toLowerCase()
+  if (!term) return []
+  const english = pkg.translations('items', 'en')
+  const manifest = pkg.manifest ?? {}
+  const hits = []
+  for (const record of items.value ?? []) {
+    const origin = SEARCH_ORIGINS.find(([prefix]) => String(record.backward_compatibility).startsWith(prefix))?.[1]
+    if (!origin || !(record.images?.length > 0)) continue
+    const texts = english[record.id]
+    const haystack = searchText(texts)
+    const count = haystack.split(term).length - 1
+    if (count === 0) continue
+    const location = recordPlaces.value.get(record.id) ?? null
+    const monument = location ? monumentsOf(location).find((m) => [m.main, ...m.related].some((r) => r.id === record.id)) ?? null : null
+    const trail = origin === 'trails' ? manifest.trail_projects?.[String(record.backward_compatibility).split(':')[2]] : null
+    // Legacy named an Explore record's project by the source word itself (SearchPage).
+    const project = origin === 'explore' ? '' : (trail?.name?.en ?? manifest.projects?.[record.project_id]?.name?.en ?? '')
+    hits.push({
+      record,
+      origin,
+      key: `${count}-${haystack}`,
+      name: String(texts?.name ?? record.internal_name ?? '').trim(),
+      date: String(texts?.dates ?? '').trim(),
+      location,
+      country: location ? countryOf(location) : null,
+      project,
+      monument,
+    })
+  }
+  return hits.sort((a, b) => (a.key < b.key ? 1 : a.key > b.key ? -1 : a.name.toLowerCase().localeCompare(b.name.toLowerCase())))
+}
+
+/**
+ * Where a result opens: Explore's own and the trails' records on Explore's
+ * monument page, as legacy linked them; the others on their home site's item
+ * page (the project's `home_site`), our sites standing in for legacy's.
+ */
+export function searchResultLink(hit) {
+  if (hit.origin === 'explore' || hit.origin === 'trails') return hit.monument ? { to: monumentLink(hit.monument) } : null
+  const home = pkg.manifest?.projects?.[hit.record.project_id]?.home_site
+  return home ? { href: siblingSiteUrl(home, `/item/${hit.record.id}`) } : null
+}
+
 // One banner per visit, drawn from the active ones, as legacy drew one per request.
 let bannerIndex = null
 
@@ -685,11 +894,16 @@ export const banner = computed(() => {
 
 const placeRoute = { country: 'country', territory: 'territory', location: 'location' }
 
-/** The page of a place, keeping the theme or the filter it is explored by. */
-export function placeLink(place, { theme = null, filter = null } = {}) {
+/**
+ * The page of a place, keeping the theme or the filter it is explored by,
+ * and, for a location, the territory it was reached through: legacy's path
+ * named the territory only when the visitor had chosen it (`…/tr-8/l-337`).
+ */
+export function placeLink(place, { theme = null, filter = null, territory = null } = {}) {
   const query = {}
   if (theme) query.theme = theme.id
   if (filter) query.filter = filter
+  if (territory && levelOf(place) === 'location') query.territory = territory.id
   return { name: placeRoute[levelOf(place)], params: { id: place.id }, query }
 }
 
@@ -697,13 +911,20 @@ export function themeLink(theme) {
   return { name: 'theme', params: { id: theme.id } }
 }
 
-/** A monument's page, keeping the theme, the sub-itinerary or the route it is explored by. */
-export function monumentLink(monument, { theme = null, sub = null, route = null } = {}) {
+/** A monument's page, keeping the theme, the territory, the sub-itinerary or the route it is explored by. */
+export function monumentLink(monument, { theme = null, territory = null, sub = null, route = null } = {}) {
   const query = { location: monument.location.id }
   if (theme) query.theme = theme.id
+  if (territory) query.territory = territory.id
   if (sub) query.itinerary = sub.id
   if (route) query.route = route.id
   return { name: 'monument', params: { id: monument.main.id }, query }
+}
+
+/** The territory an address names for a location (`?territory=`), when it is the location's own. */
+export function pathTerritory(location, id) {
+  const territory = territoryOf(location)
+  return territory && typeof id === 'string' && territory.id === id ? territory : null
 }
 
 /**
@@ -723,7 +944,8 @@ export async function resolveLegacyPath(path, section = null) {
   const theme = parts.t ? exploreCollection('thematiccycle', parts.t) : null
   const query = {}
   if (theme) query.theme = theme.id
-  if (parts.lan) query.lang = parts.lan
+  // The language a monument's texts are read in (MonumentPage `?lan=`).
+  if (parts.lan) query.lan = parts.lan
   const sub = parts.si ? exploreCollection('itinerary', parts.si) : null
   const route = parts.r ? exploreCollection('itinerary', parts.r) : null
   const along = sub ?? route
@@ -747,9 +969,14 @@ export async function resolveLegacyPath(path, section = null) {
   if (itinerary) return { name: 'itinerary', params: { id: itinerary.id }, query }
   if (section === 'itineraries' && parts.c) {
     const country = exploreCollection('country', parts.c)
+    const territory = parts.tr ? exploreCollection('region', parts.tr) : null
+    if (territory) query.territory = territory.id
     if (country) return { name: 'itineraries', params: { id: country.id }, query }
   }
   const location = parts.l ? exploreCollection('location', parts.l) : null
+  // A location reached through its territory keeps it, in the panel and the trail.
+  const throughTerritory = location && parts.tr ? pathTerritory(location, exploreCollection('region', parts.tr)?.id) : null
+  if (throughTerritory) query.territory = throughTerritory.id
   if (parts.m && location) {
     const monument = monumentsOf(location).find((m) => m.exploreId === parts.m)
     if (monument) return { name: 'monument', params: { id: monument.main.id }, query: { ...query, location: location.id } }
@@ -758,6 +985,6 @@ export async function resolveLegacyPath(path, section = null) {
     ?? (parts.tr ? exploreCollection('region', parts.tr) : null)
     ?? (parts.c ? exploreCollection('country', parts.c) : null)
   if (place) return { name: placeRoute[levelOf(place)], params: { id: place.id }, query }
-  if (theme) return { name: 'theme', params: { id: theme.id }, query: parts.lan ? { lang: parts.lan } : {} }
+  if (theme) return { name: 'theme', params: { id: theme.id }, query: {} }
   return null
 }

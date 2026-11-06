@@ -69,10 +69,15 @@ describe('website smoke test', () => {
   it("draws legacy's chrome: the two logos, the three ways in, and legacy's footer", async () => {
     const { app, host } = await mountOn('#/', '.explore-footer')
 
-    // Explore's logo is the header's home link; MWNF's, which the theme draws first, links to its portal.
-    expect(host.querySelector('.mwnf-header__home img').getAttribute('src')).toMatch(/\/theme\/assets\/explorelogo_wide\.png$/)
-    expect(host.querySelector('.mwnf-header__logo img').getAttribute('src')).toMatch(/\/theme\/assets\/logo\.jpg$/)
-    expect(host.querySelector('.mwnf-header__logo').getAttribute('href')).toBe('https://www.museumwnf.org')
+    // Legacy's header: MWNF's logo first, linking to its portal; Explore's,
+    // linking home; its four links in English; the search button, no
+    // language list.
+    expect(host.querySelector('.explore-header__mwnf img').getAttribute('src')).toMatch(/\/theme\/assets\/logo\.jpg$/)
+    expect(host.querySelector('.explore-header__mwnf').getAttribute('href')).toBe('https://www.museumwnf.org')
+    expect(host.querySelector('.explore-header__explore img').getAttribute('src')).toMatch(/\/theme\/assets\/explorelogo_wide\.png$/)
+    expect(texts(host, '.explore-header__links a')).toEqual(["What's New?", 'About', 'Credits', 'Get Involved'])
+    expect(host.querySelector('.explore-header__button')).not.toBeNull()
+    expect(host.querySelector('.mwnf-language-switcher, .mwnf-header__languages')).toBeNull()
     expect(texts(host, '.mwnf-nav__link')).toEqual(['Explore by Theme', 'Explore by Country', 'Explore by Itinerary'])
     expect(texts(host, '.explore-footer__links .explore-footer__link')).toEqual([
       'MWNF Home', 'Home', 'About', 'Get involved', 'Contact', 'Important Legal Notice', 'Credits', 'Cookies',
@@ -129,24 +134,39 @@ describe('website smoke test', () => {
     expect(covers[0].getAttribute('src')).toBe('https://images.museumwnf.org/small/books/3/en/31/book/2.jpg')
     expect(host.querySelectorAll('.explore-travel--tours .explore-travel__record')).toHaveLength(14)
     expect(texts(host, '.explore-partnerships__title')).toEqual(['Barakat', 'European Union'])
-    // Legacy's "Read in": the languages the theme is written in.
-    await vi.waitFor(() => expect(host.querySelectorAll('.mwnf-languages__button')).toHaveLength(3), { timeout: 30000 })
+    // Legacy's "Read in": the languages the introduction is written in.
+    await vi.waitFor(
+      () => expect(host.querySelectorAll('.explore-description .explore-read-in option').length).toBeGreaterThan(1),
+      { timeout: 30000 },
+    )
 
     app.unmount()
   }, 60000)
 
-  it('reads a theme in Spanish: its Spanish name, and English where the Spanish row has no introduction', async () => {
+  it("reads a theme's introduction in the languages it has a row in, its name in English", async () => {
     const theme = await collection('mwnf3_explore:thematiccycle:1')
-    const { app, host } = await mountOn(`#/theme/${theme.id}?lang=es`, '.explore-tiles__tile')
+    const { app, host } = await mountOn(`#/theme/${theme.id}`, '.explore-tiles__tile')
 
-    expect(host.querySelector('.explore-page__title').textContent.trim()).toBe(
-      'Explorar el patrimonio islámico del Mediterráneo',
-    )
+    const title = () => host.querySelector('.explore-page__title').textContent.trim()
+    expect(title()).toBe('Explore the Islamic Heritage of the Mediterranean')
     expect(host.querySelector('.explore-page__text').textContent).toContain('Did you know that Islam')
+    // Legacy's "Read in" lists every language the theme has a row in; the
+    // Spanish row names the theme but has no introduction, and legacy showed
+    // it empty, the name still in English.
+    await vi.waitFor(
+      () =>
+        expect([...host.querySelectorAll('.explore-description .explore-read-in option')].map((o) => o.value)).toEqual(
+          ['en', 'es', 'it'],
+        ),
+      { timeout: 30000 },
+    )
+    const select = host.querySelector('.explore-description .explore-read-in select')
+    select.value = 'es'
+    select.dispatchEvent(new globalThis.Event('change'))
+    await vi.waitFor(() => expect(host.querySelector('.explore-page__text').textContent.trim()).toBe(''))
+    expect(title()).toBe('Explore the Islamic Heritage of the Mediterranean')
 
     app.unmount()
-    // The site remembers the language chosen; the pages after this one are read in English.
-    globalThis.localStorage.clear()
   }, 60000)
 
   it('renders a country by theme, and the same country by country', async () => {
@@ -154,7 +174,7 @@ describe('website smoke test', () => {
     const spain = await collection('mwnf3_explore:country:es')
 
     const byTheme = await mountOn(`#/country/${spain.id}?theme=${theme.id}`, '.explore-tiles__tile')
-    expect(byTheme.host.querySelector('.explore-page__subtitle').textContent.split(', ')).toHaveLength(6)
+    expect(byTheme.host.querySelector('.explore-territories').textContent.split(', ')).toHaveLength(6)
     expect(byTheme.host.querySelector('.explore-page__text').textContent).toContain('medieval Spain')
     expect(byTheme.host.querySelectorAll('.explore-tiles__tile')).toHaveLength(64)
     expect(byTheme.host.querySelectorAll('.explore-travel--books .explore-travel__record')).toHaveLength(1)
@@ -180,11 +200,19 @@ describe('website smoke test', () => {
 
     const [collections] = await loadEntities(['collections'])
     const withBackground = collections.find((c) => c.extra?.historical_background?.length)
-    const background = await mountOn(`#/location/${withBackground.id}`, '.explore-background__text')
-    expect(background.host.querySelector('.explore-background__heading').textContent).toContain('Historical background')
-    expect(background.host.querySelector('.explore-background__text').textContent.trim().length).toBeGreaterThan(100)
+    // Legacy opens a location on its historical background, cut with "Read more.".
+    const background = await mountOn(`#/location/${withBackground.id}`, '.explore-background__label')
+    expect(background.host.querySelector('.explore-menu__item--selected').textContent.trim()).toBe('HISTORICAL BACKGROUND')
+    expect(background.host.querySelector('.explore-background__label').textContent).toContain('| Historical Background')
+    expect(
+      background.host.querySelector('.explore-background .explore-read-more__text').textContent.trim().length,
+    ).toBeGreaterThan(100)
     background.app.unmount()
   }, 90000)
+
+  // A record's heading as legacy wrote it, "In <project> <source>", spaces collapsed.
+  const sources = (host, scope = '') =>
+    texts(host, `${scope} .explore-monument__source`).map((s) => s.replace(/\s+/g, ' '))
 
   it("renders a monument: its own record's description, and the records it also stands for as related content", async () => {
     const [items] = await loadEntities(['items'])
@@ -192,27 +220,46 @@ describe('website smoke test', () => {
     // Monument 557 is a Travels "Exhibition Trails" record and a Virtual
     // Museum one: legacy shows the first, and the second as related content.
     const trails = items.find((i) => i.backward_compatibility === 'mwnf3_travels:monument:IAM:es:1:IX:1:b')
-    const { app, host } = await mountOn(`#/monument/${trails.id}?location=${toledo.id}`, '.explore-monument__name')
+    const { app, host } = await mountOn(`#/monument/${trails.id}?location=${toledo.id}`, '.explore-entry')
 
     expect(host.querySelector('.explore-page__title').textContent.replace(/\s+/g, ' ').trim()).toBe(
-      'Mosque of Cristo de la Luz (Toledo, Spain)',
+      'Mosque of Cristo de la Luz(Toledo, Spain)',
     )
-    expect(host.querySelector('.explore-monument__source').textContent).toBe('Exhibition Trails')
-    expect(host.querySelector('.explore-tabs__panel').textContent).toContain('This mosque, in fact, is two buildings')
-    expect(host.textContent).toContain('María Teresa Pérez Higuera')
-
-    const tabs = texts(host, '.explore-tabs__tab')
-    // Legacy's words: the dictionary's, the client's (in its capitals) and the shared ones.
-    expect(tabs).toEqual([
-      'Description', 'Map', 'GET DIRECTIONS', 'ADDITIONAL INFORMATION', 'Related Content', 'RELATED ITINERARIES',
+    expect(sources(host)[0]).toMatch(/^In .*Exhibition Trails$/)
+    expect(host.querySelector('.explore-entry').textContent).toContain('This mosque, in fact, is two buildings')
+    expect(host.querySelector('.explore-entry__caption').textContent).toBe(
+      'Mosque of Cristo de la Luz, general view, Toledo. | Photographer: Guillermo Maestro Casado, Madrid | © Museum With No Frontiers (MWNF)',
+    )
+    expect(host.textContent).toContain('Prepared by: María Teresa Pérez Higuera')
+    // "Read in" the languages the record is written in.
+    expect([...host.querySelectorAll('.explore-entry .explore-read-in option')].map((o) => o.value)).toEqual([
+      'en', 'es', 'fr', 'it', 'pt',
     ])
-    host.querySelectorAll('.explore-tabs__tab')[4].click()
-    await vi.waitFor(() => expect(host.querySelector('.explore-related')).not.toBeNull())
-    expect(host.querySelector('.explore-related .explore-monument__source').textContent).toBe(
-      'Virtual Museum — Discover Islamic Art',
+
+    const tabs = texts(host, '.explore-monument-menu__item')
+    expect(tabs).toEqual([
+      'DESCRIPTION', 'MAP', 'GET DIRECTIONS', 'ADDITIONAL INFORMATION', 'RELATED CONTENT', 'RELATED ITINERARIES',
+    ])
+    const open = async (label, selector) => {
+      host.querySelectorAll('.explore-monument-menu__item')[texts(host, '.explore-monument-menu__item').indexOf(label)].click()
+      await vi.waitFor(() => expect(host.querySelector(selector)).not.toBeNull())
+    }
+    await open('GET DIRECTIONS', '.explore-field')
+    expect(host.querySelector('.explore-field__label').textContent.trim()).toBe('DIRECTIONS')
+    expect(host.querySelector('.explore-field__value').textContent.trim()).toBe(
+      'In the calle Cristo de la Luz. Go up the stairs on the right.',
+    )
+    await open('RELATED CONTENT', '.explore-monument__related')
+    expect(sources(host, '.explore-monument__related')[0]).toBe('In Discover Islamic Art Virtual Museum')
+    await open('RELATED ITINERARIES', '.explore-monument-itinerary')
+    expect(host.querySelector('.explore-monument-itinerary__parent').textContent.trim()).toBe(
+      'Mudejar Art. Islamic Aesthetics in Christian Art (13 Sub-Itineraries)',
+    )
+    expect(host.querySelector('.explore-monument-itinerary .explore-sub-card__link').textContent.replace(/\s+/g, ' ').trim()).toBe(
+      'IX. Traces of the Past: Churches, Synagogues and Palaces [One day]',
     )
     // Its map: one marker, at legacy's position of the monument.
-    host.querySelectorAll('.explore-tabs__tab')[1].click()
+    await open('MAP', '.explore-map')
     await vi.waitFor(() => expect(host.querySelectorAll('.explore-map path.leaflet-interactive')).toHaveLength(1))
 
     app.unmount()
@@ -222,40 +269,38 @@ describe('website smoke test', () => {
     const [items] = await loadEntities(['items'])
     const kairouan = await collection('mwnf3_explore:location:472')
     // Monument 1032 is the Museum of Islamic Art (Kairouan): Explore has no
-    // description of it, so legacy shows the museum's own.
+    // description of it, so legacy shows the museum's own, naming no project.
     const record = items.find((i) => i.backward_compatibility === 'mwnf3_explore:monument:1032')
-    const { app, host } = await mountOn(`#/monument/${record.id}?location=${kairouan.id}`, '.explore-monument__name')
+    const { app, host } = await mountOn(`#/monument/${record.id}?location=${kairouan.id}`, '.explore-entry')
 
-    expect(host.querySelector('.explore-monument__source').textContent).toBe('Virtual Museum — Discover Islamic Art')
+    expect(sources(host)[0]).toBe('In Virtual Museum')
     // The museum's text arrives with the partners' translations, after the name.
     await vi.waitFor(
-      () => expect(host.querySelector('.explore-tabs__panel').textContent).toContain('located in Raqqada'),
+      () => expect(host.querySelector('.explore-entry').textContent).toContain('located in Raqqada'),
       { timeout: 30000 },
     )
     // Explore's own record of it is never related content.
-    expect(texts(host, '.explore-tabs__tab')).not.toContain('Related Content')
+    expect(texts(host, '.explore-monument-menu__item')).not.toContain('RELATED CONTENT')
 
     app.unmount()
   }, 60000)
 
-  it('renders a monument led by a Sharing History record: named Virtual Museum there, by its project below', async () => {
+  it('renders a monument led by a Sharing History record: named Virtual Museum there, Sharing History below', async () => {
     const [items] = await loadEntities(['items'])
     const location = await collection('mwnf3_explore:location:223')
     // Monument 1747 stands for seven Sharing History records and nothing
     // else: legacy shows the first by number as "Virtual Museum", and the
-    // others as related content under a word its dictionary lacks.
+    // others as related content.
     const record = items.find((i) => i.backward_compatibility === 'mwnf3_sharing_history:sh_monuments:awe:tr:10')
-    const { app, host } = await mountOn(`#/monument/${record.id}?location=${location.id}`, '.explore-monument__name')
+    const { app, host } = await mountOn(`#/monument/${record.id}?location=${location.id}`, '.explore-entry')
 
-    const [label, project] = host.querySelector('.explore-monument__source').textContent.split(' — ')
-    expect(label).toBe('Virtual Museum')
-    expect(project).toBeTruthy()
-    const tabs = texts(host, '.explore-tabs__tab')
-    host.querySelectorAll('.explore-tabs__tab')[tabs.indexOf('Related Content')].click()
-    await vi.waitFor(() => expect(host.querySelector('.explore-related')).not.toBeNull())
-    const related = texts(host, '.explore-related .explore-monument__source')
+    expect(sources(host)[0]).toMatch(/^In .+ Virtual Museum$/)
+    const tabs = texts(host, '.explore-monument-menu__item')
+    host.querySelectorAll('.explore-monument-menu__item')[tabs.indexOf('RELATED CONTENT')].click()
+    await vi.waitFor(() => expect(host.querySelector('.explore-monument__related')).not.toBeNull())
+    const related = sources(host, '.explore-monument__related')
     expect(related).toHaveLength(6)
-    expect(new Set(related)).toEqual(new Set([project]))
+    expect(related.every((line) => /^In .+ Sharing History$/.test(line))).toBe(true)
 
     app.unmount()
   }, 60000)
@@ -264,34 +309,37 @@ describe('website smoke test', () => {
     const [items] = await loadEntities(['items'])
     const lamego = await collection('mwnf3_explore:location:108')
     // Monument 128, Lamego's cathedral, is a Travels record, and Explore
-    // describes it itself: legacy shows Explore's text, unnamed, and the
-    // Travels record as related content.
+    // describes it itself: legacy shows Explore's text, naming no project,
+    // and the Travels record as related content.
     const trails = items.find((i) => i.backward_compatibility === 'mwnf3_travels:monument:GPA:pt:1:IV:2:a')
-    const { app, host } = await mountOn(`#/monument/${trails.id}?location=${lamego.id}`, '.explore-monument__name')
+    const { app, host } = await mountOn(`#/monument/${trails.id}?location=${lamego.id}`, '.explore-entry')
 
-    expect(host.querySelector('.explore-tabs__panel .explore-monument__source')).toBeNull()
-    expect(host.querySelector('.explore-tabs__panel').textContent).toContain('Lamego Cathedral dates back to the 11th century')
-    const tabs = texts(host, '.explore-tabs__tab')
-    host.querySelectorAll('.explore-tabs__tab')[tabs.indexOf('Related Content')].click()
-    await vi.waitFor(() => expect(host.querySelector('.explore-related')).not.toBeNull())
-    expect(host.querySelector('.explore-related .explore-monument__source').textContent).toBe('Exhibition Trails')
+    expect(sources(host)[0]).toBe('In Explore')
+    expect(host.querySelector('.explore-entry').textContent).toContain('Lamego Cathedral dates back to the 11th century')
+    const tabs = texts(host, '.explore-monument-menu__item')
+    host.querySelectorAll('.explore-monument-menu__item')[tabs.indexOf('RELATED CONTENT')].click()
+    await vi.waitFor(() => expect(host.querySelector('.explore-monument__related')).not.toBeNull())
+    expect(sources(host, '.explore-monument__related')[0]).toMatch(/^In .*Exhibition Trails$/)
 
     app.unmount()
   }, 60000)
 
-  it('reads a monument in French: its French name, and English where the French row has no description', async () => {
+  it("reads a monument in French, as legacy's `lan-fr`: the French row alone, its empty description empty", async () => {
     const [items] = await loadEntities(['items'])
     const toledo = await collection('mwnf3_explore:location:337')
     const trails = items.find((i) => i.backward_compatibility === 'mwnf3_travels:monument:IAM:es:1:IX:1:b')
-    const { app, host } = await mountOn(`#/monument/${trails.id}?location=${toledo.id}&lang=fr`, '.explore-monument__name')
+    const { app, host } = await mountOn(`#/monument/${trails.id}?location=${toledo.id}&lan=fr`, '.explore-entry')
 
-    expect(host.querySelector('.explore-monument__name').textContent.trim()).toBe('Mosquée Cristo de la Luz')
-    expect(host.querySelector('.explore-tabs__panel').textContent).toContain('This mosque, in fact, is two buildings')
+    // The French texts arrive after the page.
+    await vi.waitFor(
+      () => expect(host.querySelector('.explore-entry__name').textContent.trim()).toBe('Mosquée Cristo de la Luz'),
+      { timeout: 30000 },
+    )
+    expect(host.querySelector('.explore-entry .explore-read-in select').value).toBe('fr')
+    expect(host.querySelector('.explore-entry').textContent).not.toContain('This mosque, in fact, is two buildings')
 
     app.unmount()
-    globalThis.localStorage.clear()
   }, 60000)
-
   it("redirects legacy's addresses to their pages", async () => {
     const [items] = await loadEntities(['items'])
     const toledo = await collection('mwnf3_explore:location:337')
@@ -340,9 +388,10 @@ describe('website smoke test', () => {
     const manueline = await collection('mwnf3_explore:itinerary:97')
     const page = await mountOn(`#/itinerary/${manueline.id}`, '.explore-subs__heading')
     expect(page.host.querySelector('.explore-subs__heading').textContent.trim()).toBe('14 Sub-Itineraries')
-    expect(texts(page.host, '.explore-itinerary__name').slice(0, 2)).toEqual([
-      'The Beach of Adventure [Two days]',
-      'Lands of the Order of Christ [Two days]',
+    // Legacy numbered them in Roman numerals.
+    expect(texts(page.host, '.explore-sub-card__link').slice(0, 2)).toEqual([
+      'I. The Beach of Adventure [Two days]',
+      'II. Lands of the Order of Christ [Two days]',
     ])
     page.app.unmount()
   }, 60000)
@@ -350,7 +399,8 @@ describe('website smoke test', () => {
   it("renders a sub-itinerary: its locations in legacy's order, each one's monuments", async () => {
     const sub = await collection('mwnf3_explore:itinerary:100')
     const { app, host } = await mountOn(`#/sub-itinerary/${sub.id}`, '.explore-tiles__label')
-    expect(texts(host, '.explore-sub__tab')).toEqual(['Santarém', 'Golegã', 'Torres Novas', 'Atalaia', 'Tomar', 'Dornes'])
+    // Legacy wrote the tabs in capitals.
+    expect(texts(host, '.explore-sub__tab')).toEqual(['SANTARÉM', 'GOLEGÃ', 'TORRES NOVAS', 'ATALAIA', 'TOMAR', 'DORNES'])
     expect(texts(host, '.explore-tiles__label')).toEqual([
       'Church of Santa Maria de Marvila',
       'Municipal Museum',
@@ -418,12 +468,13 @@ describe('website smoke test', () => {
   // The one language rule, checked the same way in every website: every
   // offered language is one the package declares for this site AND one the
   // items actually carry.
-  it('offers the languages the package declares, where the items carry them', () => {
-    expect(checkOfferedLanguages(config)).toEqual([])
-    expect(config.languages.length).toBeGreaterThan(0)
-    const switcher = config.navigation.languages
-    expect(switcher.map((l) => l.code)).toEqual(config.languages)
-    expect(switcher.every((l) => Boolean(l.label))).toBe(true)
+  // Legacy's interface was English only; its texts are read in the languages
+  // the package declares, where the items carry them, through "Read in".
+  it('speaks English, and reads its texts in the languages the package declares', () => {
+    expect(config.languages).toEqual(['en'])
+    expect(config.navigation.languages).toBeUndefined()
+    expect(checkOfferedLanguages({ languages: config.contentLanguages })).toEqual([])
+    expect(config.contentLanguages.length).toBeGreaterThan(1)
   })
 
   // The chrome is two layers, and either one failing is silent: a missing

@@ -1,5 +1,5 @@
 import {
-  languageLabels, mwnfLinks, offeredLanguages, sectionMeta, useDataPackage,
+  mwnfLinks, offeredLanguages, sectionMeta, useDataPackage,
 } from '@museumwnf/viewer-core'
 import { TextPageView } from '@museumwnf/viewer-layout/views'
 import SiteShell from './SiteShell.vue'
@@ -8,6 +8,7 @@ import ItinerariesPage from './views/ItinerariesPage.vue'
 import ItineraryPage from './views/ItineraryPage.vue'
 import MonumentPage from './views/MonumentPage.vue'
 import PlacePage from './views/PlacePage.vue'
+import SearchPage from './views/SearchPage.vue'
 import SubItineraryPage from './views/SubItineraryPage.vue'
 import ThemePage from './views/ThemePage.vue'
 import { bannerImage, chrome } from './composables/chrome.js'
@@ -29,9 +30,10 @@ import { banner, exploreCollection, resolveLegacyPath, title } from './composabl
 const { manifest } = useDataPackage()
 
 // The languages the package declares for the site, kept where the items
-// carry them. Explore's own texts are English; a theme or a monument may be
-// read in more, through its own "Read in" buttons.
-const languages = offeredLanguages()
+// carry them: the ones a text may be read in, through its own "Read in".
+// Legacy's interface was English only (inventory-app#2424), so the site
+// itself is offered in English alone.
+const contentLanguages = offeredLanguages()
 
 // Every route names the section it belongs to and the entities its view
 // reads. Every page shows the banner and the partnerships, which live on the
@@ -57,7 +59,8 @@ export default {
     entities: [],
   },
 
-  languages,
+  languages: ['en'],
+  contentLanguages,
 
   shell: SiteShell,
 
@@ -65,7 +68,6 @@ export default {
   // header's links are legacy's own pages. The footer is legacy's, the
   // website's own (components/ExploreFooter.vue).
   navigation: {
-    languages: languageLabels(languages),
     links: [
       { section: 'themes', label: 'explore.nav.byTheme', to: { name: 'home', hash: '#explore-by-theme' } },
       { section: 'countries', label: 'explore.nav.byCountry', to: { name: 'home', hash: '#explore-by-country' } },
@@ -169,7 +171,8 @@ export default {
       path: '/country/:id/itineraries',
       name: 'itineraries',
       component: ItinerariesPage,
-      props: true,
+      // `?territory=`: legacy's itineraries of one territory (`/itineraries/c-…/tr-…`).
+      props: (route) => ({ id: route.params.id, territory: String(route.query.territory ?? '') }),
       meta: meta('itineraries'),
     },
     {
@@ -210,6 +213,14 @@ export default {
       meta: meta('important-information'),
     },
     { path: '/new', name: 'new', component: TextPageView, props: textPage('explore.whatsNew.body'), meta: meta('new') },
+    {
+      // Legacy's search results, `/search/mwnf?q=` or `/search/google?q=` (inventory-app#2424).
+      path: '/search/:type(mwnf|google)',
+      name: 'search',
+      component: SearchPage,
+      props: true,
+      meta: meta('search', 'items'),
+    },
   ],
 
   // Legacy's addresses — `/themes/t-1/c-es/l-337/m-557/lan-en`,

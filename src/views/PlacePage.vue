@@ -1,19 +1,18 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { NotFoundView, languageLabels, md, useI18n, useRecordLanguage } from '@museumwnf/viewer-core'
-import { RecordLanguages } from '@museumwnf/viewer-layout/content'
-import AdditionalInformation from '../components/AdditionalInformation.vue'
+import { NotFoundView, md, useI18n, useRecordLanguage } from '@museumwnf/viewer-core'
 import ExploreFrame from '../components/ExploreFrame.vue'
 import ExploreMap from '../components/ExploreMap.vue'
 import ExploreTiles from '../components/ExploreTiles.vue'
-import LocationBackground from '../components/LocationBackground.vue'
+import PlaceMenu from '../components/PlaceMenu.vue'
+import ReadIn from '../components/ReadIn.vue'
 import SuggestedRoutes from '../components/SuggestedRoutes.vue'
 import TravelRecords from '../components/TravelRecords.vue'
 import {
-  byTitle, collectionById, countryOf, legacyId, levelOf, monumentLink, monumentName, partnershipsFor, placeLink,
-  placePosition, positionOf, shownLocations, shownMonuments, shownTerritories, territoryOf, text, themeCountryText,
-  themeLink, title, travelFor, useCollectionLanguages, useTexts,
+  byTitle, collectionById, countryOf, legacyId, levelOf, monumentLink, monumentName, placeLink,
+  placePosition, positionOf, shownLocations, shownMonuments, shownTerritories, pathTerritory, text, themeCountries, themeCountryLanguages, themeCountryText,
+  themeLink, ownText, title, travelFor, useCollectionLanguages, useTexts,
 } from '../composables/explore.js'
 
 // A country's, a territory's or a location's page. Reached by theme
@@ -40,37 +39,59 @@ const theme = computed(() => {
   return collection?.type === 'theme' ? collection : null
 })
 const filter = computed(() => (!theme.value && typeof route.query.filter === 'string' ? route.query.filter : ''))
-const context = computed(() => ({ theme: theme.value, filter: filter.value || null }))
 const country = computed(() => countryOf(place.value))
+// The territory on the path: the page's own, or the one the address names
+// for a location (`?territory=`); legacy's panel left it unchosen otherwise.
 const territory = computed(() =>
-  level.value === 'territory' ? place.value : level.value === 'location' ? territoryOf(place.value) : null,
+  level.value === 'territory'
+    ? place.value
+    : level.value === 'location'
+      ? pathTerritory(place.value, route.query.territory)
+      : null,
 )
+const context = computed(() => ({ theme: theme.value, filter: filter.value || null, territory: territory.value }))
 const location = computed(() => (level.value === 'location' ? place.value : null))
 
-const languages = useCollectionLanguages(() => place.value)
+// Legacy's ExplorePage: the name in English; the description in full, "Read
+// in" the languages it has a row in. A country reached by theme shows the
+// theme's own text about it instead of its own. A location's own text is its
+// historical background, in the tab menu.
+const byThemeText = computed(() => Boolean(theme.value) && level.value === 'country')
+const translated = useCollectionLanguages(() => place.value)
+const languages = computed(() =>
+  level.value === 'location'
+    ? []
+    : byThemeText.value
+      ? themeCountryLanguages(theme.value, place.value)
+      : translated.value,
+)
 const { language, select, dir } = useRecordLanguage(place, { languages: () => languages.value })
-const own = computed(() => text('collections', place.value?.id, language.value))
-const name = computed(() => title(place.value, language.value))
+// Each language's own row: legacy showed an empty description empty.
+const own = computed(() => ownText('collections', place.value?.id, language.value))
+const name = computed(() => title(place.value, 'en'))
 
+// Legacy listed the country's territories under its name on the theme path,
+// and named the theme again there when it covers a single country.
 const territoriesLine = computed(() =>
-  level.value === 'country'
-    ? [...shownTerritories(place.value, context.value)].sort(byTitle(locale.value)).map((c) => title(c, locale.value)).join(', ')
+  byThemeText.value
+    ? [...shownTerritories(place.value, context.value)].sort(byTitle('en')).map((c) => title(c, 'en')).join(', ')
     : '',
 )
+const singleCountryTheme = computed(() =>
+  theme.value && level.value !== 'location' && themeCountries(theme.value).length === 1 ? title(theme.value, 'en') : '',
+)
 const themeText = computed(() =>
-  theme.value && level.value === 'country' ? md(themeCountryText(theme.value, place.value, language.value)) : '',
+  byThemeText.value ? md(themeCountryText(theme.value, place.value, language.value)) : '',
 )
-const description = computed(() => (level.value === 'location' ? '' : md(own.value.description)))
+const description = computed(() => (level.value === 'location' || byThemeText.value ? '' : md(own.value.description)))
 
-const ownInformation = computed(() =>
-  [
-    { key: 'howToReach', label: t('explore.info.howToReach'), value: own.value.extra?.how_to_reach },
-    { key: 'information', label: t('explore.info.information'), value: own.value.extra?.info },
-    { key: 'contact', label: t('explore.info.contact'), value: own.value.extra?.contact },
-  ]
-    .filter((entry) => entry.value)
-    .map((entry) => ({ key: entry.key, label: entry.label, html: md(entry.value) })),
-)
+// The tab menu's texts: legacy read them in English.
+const fields = computed(() => {
+  const extra = text('collections', place.value?.id, 'en').extra ?? {}
+  return Object.fromEntries(
+    ['how_to_reach', 'contact', 'info'].filter((key) => extra[key]).map((key) => [key, md(extra[key])]),
+  )
+})
 
 const locationTiles = computed(() =>
   level.value === 'location'
@@ -89,7 +110,7 @@ const monumentTiles = computed(() =>
           id: `${m.exploreId}`,
           label: monumentName(m, locale.value),
           image: m.main.images?.[0]?.url ?? null,
-          to: monumentLink(m, { theme: theme.value }),
+          to: monumentLink(m, context.value),
         }))
         .sort((a, b) => a.label.localeCompare(b.label, locale.value)),
 )
@@ -100,7 +121,7 @@ const pins = computed(() =>
   level.value === 'location'
     ? shownMonuments(place.value, context.value).flatMap((m) => {
         const at = positionOf(m)
-        return at ? [{ ...at, label: monumentName(m, locale.value), to: monumentLink(m, { theme: theme.value }) }] : []
+        return at ? [{ ...at, label: monumentName(m, locale.value), to: monumentLink(m, context.value) }] : []
       })
     : shownLocations(place.value, context.value).flatMap((l) => {
         const at = placePosition(l)
@@ -115,6 +136,9 @@ const crumbs = computed(() => {
   if (theme.value) trail.push({ label: title(theme.value, locale.value), to: themeLink(theme.value) })
   if (country.value) trail.push({ label: title(country.value, locale.value), to: placeLink(country.value, context.value) })
   if (level.value === 'territory') trail.push({ label: title(place.value, locale.value) })
+  if (level.value === 'location' && territory.value) {
+    trail.push({ label: title(territory.value, locale.value), to: placeLink(territory.value, context.value) })
+  }
   if (level.value === 'location') trail.push({ label: title(place.value, locale.value) })
   return trail
 })
@@ -126,25 +150,26 @@ const selection = computed(() => ({
   territory: territory.value,
   location: location.value,
 }))
-const partnerships = computed(() =>
-  partnershipsFor({ theme: theme.value, level: level.value, id: legacyId(place.value) }),
-)
 </script>
 
 <template>
   <NotFoundView v-if="!place" />
   <p v-else-if="!ready" class="explore-loading">{{ t('core.status.loading') }}</p>
-  <ExploreFrame v-else :crumbs="crumbs" :selection="selection" :partnerships="partnerships">
+  <ExploreFrame v-else :crumbs="crumbs" :selection="selection">
     <article class="explore-page" :class="`explore-page--${level}`">
-      <h1 class="explore-page__title" :dir="dir || undefined">{{ name }}</h1>
-      <p v-if="territoriesLine" class="explore-page__subtitle">{{ territoriesLine }}</p>
-      <RecordLanguages :languages="languageLabels(languages)" :language="language" @select="select" />
-      <div v-if="themeText" class="explore-page__text explore-prose" :dir="dir || undefined" v-html="themeText"></div>
-      <div v-if="description" class="explore-page__text explore-prose" :dir="dir || undefined" v-html="description"></div>
+      <h1 class="explore-page__title">{{ name }}</h1>
+      <div v-if="territoriesLine || singleCountryTheme" class="explore-theme-info">
+        <div v-if="territoriesLine" class="explore-territories">{{ territoriesLine }}</div>
+        <div v-if="singleCountryTheme" class="explore-territories">{{ singleCountryTheme }}</div>
+      </div>
+      <!-- Legacy drew the block, and its margin, without a description too. -->
+      <div class="explore-description">
+        <ReadIn :languages="languages" :language="language" @select="select" />
+        <div v-if="themeText" class="explore-page__text explore-prose" :dir="dir || undefined" v-html="themeText"></div>
+        <div v-if="description" class="explore-page__text explore-prose" :dir="dir || undefined" v-html="description"></div>
+      </div>
 
-      <LocationBackground :location="location" :language="language" :dir="dir" />
-
-      <AdditionalInformation :texts="ownInformation" :travel="travel" />
+      <PlaceMenu :location="location" :fields="fields" :travel="travel" />
       <ExploreMap v-if="pins.length" :pins="pins" :zoom="mapZoom" />
       <SuggestedRoutes :location="location" />
       <ExploreTiles :heading="t('explore.next.location')" :tiles="locationTiles" />

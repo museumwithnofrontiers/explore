@@ -27,7 +27,7 @@
    ExploreItinerary.vue) ─────────────────────────────────────────────────── */
 
 .explore-home { margin-inline: calc(var(--mwnf-content-padding) * -1); }
-.explore-home__description { padding: 40px; font-size: 20px; line-height: 25px; color: var(--explore-grey); }
+.explore-home__description { padding: 40px; font-family: 'Roboto Condensed', sans-serif; font-size: 20px; line-height: 25px; color: var(--explore-grey); }
 .explore-home__description a { color: var(--explore-grey); text-decoration: underline; }
 .explore-home__section { padding: 0 40px; scroll-margin-top: var(--mwnf-space); }
 .explore-home__section + .explore-home__section { margin-top: 50px; }
@@ -38,7 +38,7 @@
 .explore-travel__heading,
 .explore-background__heading { color: var(--explore-navy); font-weight: 400; }
 .explore-home__heading { margin: 0 0 30px; font-size: 48px; line-height: 60px; font-weight: 700; }
-.explore-home__intro { margin: 0 0 22px; font-size: 20px; line-height: 25px; color: var(--explore-grey); }
+.explore-home__intro { margin: 0 0 22px; font-family: 'Roboto Condensed', sans-serif; font-size: 20px; line-height: 25px; color: var(--explore-grey); }
 .explore-home__subheading { margin: 0 0 20px; font-size: 32px; line-height: 40px; font-weight: 700; }
 .explore-home__select { flex: 1; margin: 0; }
 
@@ -284,30 +284,119 @@
 
 /* ── The frame: the selection beside the page ───────────────────────────── */
 
-.explore-frame { display: grid; grid-template-columns: 17rem minmax(0, 1fr); gap: calc(var(--mwnf-space) * 2); }
-@media (max-width: 48rem) {
-  .explore-frame { grid-template-columns: minmax(0, 1fr); }
-  .explore-frame__aside { order: 2; }
+/* Legacy's ExplorePage (#explore-container, inventory-app#2424): on white, the
+   page's whole width (the shell's padding undone); the selection in a 25%
+   column, 30px from its top and left edges, the page in the other 75% with
+   40px each side; below 1200px the selection above the page. */
+.explore-frame {
+  display: flex;
+  margin: -24px -40px;
+  background: #ffffff;
 }
-.explore-select { padding: var(--mwnf-space); background: #ffffff; border: 1px solid var(--mwnf-color-border); }
-.explore-select__heading { margin: 0 0 var(--mwnf-space); color: var(--explore-navy); font-size: 1.125rem; font-weight: 400; }
-.explore-select .mwnf-facet { display: flex; flex-direction: column; gap: 0.25rem; margin-bottom: var(--mwnf-space); }
-.explore-select .mwnf-facet__select { width: 100%; }
-.explore-select__note { margin: 0; font-size: 0.875rem; color: var(--mwnf-color-muted); }
+.explore-frame__aside { position: relative; flex: 0 0 25%; width: 25%; padding: 30px 0 0 30px; }
+.explore-frame__main { flex: 0 0 75%; width: 75%; min-width: 0; padding: 0 40px 24px; }
+@media only screen and (max-width: 1199px) {
+  .explore-frame { flex-direction: column; }
+  .explore-frame__aside { width: 100%; padding: 40px 40px 0; }
+  .explore-frame__main { width: 100%; }
+}
+
+/* Legacy's SideNavigation: one box, sticky 30px from the top, a light-grey
+   rule and shadow; the title in dark green over a green rule; each step 10px
+   20px 20px, a dotted rule between them; the label 18/23px dark grey, the
+   select 16/18px on #fbfbfb with an inset shadow; the partnerships' logos
+   under the steps, each 85x125px over its title. */
+.explore-side {
+  position: sticky;
+  top: 30px;
+  width: 100%;
+  border: 1px solid var(--explore-light-grey);
+  box-shadow: 0 2px 8px var(--explore-light-grey);
+  background: #ffffff;
+}
+.explore-select__title {
+  font-size: 20px;
+  line-height: 25px;
+  color: var(--explore-green);
+  border-bottom: 1px solid var(--explore-green);
+}
+.explore-select__title > div { padding: 10px 20px; }
+.explore-select__step { position: relative; border-bottom: 1px dotted #979797; }
+.explore-select__step:last-child { border-bottom: none; margin-bottom: 10px; }
+.explore-select__step > div { padding: 10px 20px 20px; }
+.explore-select__step--disabled::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 0 200px rgba(255, 255, 255, 0.4);
+  pointer-events: none;
+}
+.explore-select__label {
+  display: inline-block;
+  margin-bottom: 10px;
+  font-size: 18px;
+  line-height: 23px;
+  color: #4a4a4a;
+}
+.explore-select__select {
+  width: 100%;
+  padding: 4px 0 4px 10px;
+  border: 1px solid #767676;
+  border-radius: 5px;
+  background-color: #fbfbfb;
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.25);
+  font: inherit;
+  font-size: 16px;
+  line-height: 18px;
+}
+.explore-select__note { margin: 0; line-height: normal; }
+.explore-select__home { color: var(--explore-green); text-decoration: none; }
+@media only screen and (max-width: 1199px) {
+  .explore-select__title { border: 1px solid var(--explore-green); }
+}
+@media only screen and (max-width: 949px) {
+  .explore-select__title { font-size: 18px; line-height: 23px; }
+  .explore-select__label { font-size: 16px; line-height: 18px; }
+}
+@media only screen and (max-width: 499px) {
+  .explore-select__title { font-size: 16px; line-height: 18px; }
+}
 
 .explore-partnerships { display: flex; flex-wrap: wrap; gap: var(--mwnf-space); margin-top: var(--mwnf-space); }
 .explore-partnerships--column { flex-direction: column; align-items: center; }
 .explore-partnerships__entry { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; color: inherit; text-decoration: none; }
 .explore-partnerships__logo { max-width: 8rem; max-height: 5rem; object-fit: contain; }
 .explore-partnerships__title { font-size: 0.875rem; }
+.explore-partnerships--side { display: block; margin: 0; padding: 10px 20px 30px; }
+.explore-partnerships--side .explore-partnerships__entry { gap: 0; font-size: 14px; line-height: 16px; }
+.explore-partnerships--side .explore-partnerships__logo {
+  width: 85px;
+  height: 125px;
+  max-width: none;
+  max-height: none;
+  object-fit: contain;
+  object-position: bottom;
+}
+.explore-partnerships--side .explore-partnerships__title { margin-top: 5px; font-size: inherit; text-align: center; }
+@media only screen and (max-width: 1199px) {
+  .explore-partnerships--side { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; }
+  .explore-partnerships--side .explore-partnerships__entry { margin: 0 20px; }
+}
 
-.explore-crumbs { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: var(--mwnf-space); font-size: 0.875rem; }
-.explore-crumbs__link { color: var(--explore-green); }
-.explore-crumbs__separator::before { content: '\203A'; }
+/* Legacy's breadcrumb: 14/16px, 30px down and 20px over the title, each
+   step a medium-green link, " > " between them. */
+.explore-crumbs { margin: 30px 0 20px; font-size: 14px; line-height: 16px; }
+.explore-crumbs__link { color: var(--explore-medium-green); text-decoration: none; }
+.explore-crumbs__separator::before { content: ' > '; white-space: pre; }
 
 /* ── Pages ──────────────────────────────────────────────────────────────── */
 
-.explore-page__title { margin: 0 0 0.5rem; font-size: 2rem; }
+/* Legacy's #explore-header: Muli bold 32/40px navy, 40px down, 30px over the page; 28/35px below 950px. */
+.explore-page__title { margin: 40px 0 30px; font-size: 32px; line-height: 40px; font-weight: 700; }
+.explore-crumbs__current { color: var(--explore-medium-green); }
+@media only screen and (max-width: 949px) {
+  .explore-page__title { font-size: 28px; line-height: 35px; }
+}
 .explore-page__subtitle { margin: 0 0 var(--mwnf-space); color: var(--mwnf-color-muted); }
 .explore-page__text { margin: var(--mwnf-space) 0; }
 .explore-page__credit { font-style: italic; color: var(--mwnf-color-muted); }
@@ -341,21 +430,65 @@
 .explore-tiles__tile--picture .explore-tiles__label { position: relative; padding: 0.1rem 0.4rem; background: rgb(0 0 0 / 55%); }
 .explore-tiles__label { font-size: 1rem; }
 
-.explore-background { margin: calc(var(--mwnf-space) * 2) 0; }
-.explore-background__heading { font-size: 1.375rem; margin: 0 0 var(--mwnf-space); }
-.explore-background__text + .explore-background__text { border-top: var(--mwnf-section-border); padding-top: var(--mwnf-space); }
+/* Legacy's ExplorePage texts and tab menu (inventory-app#2424): the
+   description 40px over what follows, its "Read in" 10px over it; the menu a
+   55px band ruled in medium-light grey, 20px over its panel, its tabs 150px
+   wide in the headings' Muli, bold, 18/23px, grey, the chosen one dark green
+   and underlined 5px; every text in Roboto Condensed 16/18px dark grey, a
+   field's label in capitals over it, 20px between fields and blocks. */
+.explore-description { margin-bottom: 40px; }
+.explore-description .explore-page__text { margin: 0; }
+.explore-description,
+.explore-description .explore-prose *,
+.explore-territories,
+.explore-place-menu,
+.explore-place-menu * {
+  font-family: 'Roboto Condensed', sans-serif;
+  font-size: 16px;
+  line-height: 18px;
+  color: #4a4a4a;
+}
+.explore-territories { margin: 0 0 5px; font-weight: bold; }
+.explore-menu {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  height: 55px;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #979797;
+}
+.explore-place-menu .explore-menu__item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 150px;
+  height: 50px;
+  margin: 5px 10px 0;
+  padding: 0 0 12px;
+  border: 0;
+  border-bottom: 5px solid transparent;
+  background: none;
+  font-family: 'Muli', sans-serif;
+  font-weight: bold;
+  font-size: 18px;
+  line-height: 23px;
+  color: #979797;
+  text-align: center;
+  cursor: pointer;
+}
+.explore-place-menu .explore-menu__item--selected { color: var(--explore-green); border-bottom-color: var(--explore-green); }
+.explore-field { margin-bottom: 20px; }
+.explore-field__label { display: block; margin-bottom: 10px; }
+.explore-additional { margin-bottom: 40px; }
+.explore-additional__label { margin-bottom: 20px; }
+.explore-additional__entry { margin-bottom: 20px; }
+.explore-place-menu .explore-additional__category { font-style: italic; }
+.explore-background__block { margin-bottom: 20px; }
+.explore-place-menu .explore-background__label { margin-bottom: 20px; font-weight: bold; }
+.explore-background .explore-read-in { margin-bottom: 20px; }
+.explore-place-menu .explore-background__toggle { display: inline-block; margin-top: 20px; font-weight: bold; color: #4a4a4a; cursor: pointer; }
 
-.explore-info { margin: calc(var(--mwnf-space) * 2) 0; border: 1px solid var(--mwnf-color-border); background: #ffffff; }
-.explore-info--open { margin-top: 0; border: 0; background: transparent; }
-.explore-info a { color: var(--explore-green); }
-.explore-info__summary { padding: 0.5rem var(--mwnf-space); cursor: pointer; color: var(--explore-green); font-weight: 600; text-transform: uppercase; }
-.explore-info__section { padding: 0 var(--mwnf-space) var(--mwnf-space); }
-.explore-info__heading { margin: var(--mwnf-space) 0 0.5rem; color: var(--explore-navy); font-size: 1.125rem; }
-.explore-info__category { margin: 0.5rem 0 0.25rem; font-size: 1rem; }
-.explore-info__contacts,
-.explore-info__websites { margin: 0; padding-left: 1.25rem; }
-.explore-info__contact { display: flex; flex-direction: column; margin-bottom: 0.5rem; }
-.explore-info__note { display: block; color: var(--mwnf-color-muted); }
 
 .explore-travel { margin: calc(var(--mwnf-space) * 2) 0; }
 .explore-travel__heading { font-size: 1.5rem; margin: 0 0 var(--mwnf-space); }
@@ -369,31 +502,114 @@
 
 /* ── The monument ───────────────────────────────────────────────────────── */
 
-.explore-monument__place { color: var(--mwnf-color-muted); font-size: 1.25rem; }
-.explore-tabs { display: flex; flex-wrap: wrap; gap: 0.25rem; margin: var(--mwnf-space) 0; border-bottom: 2px solid var(--explore-green); }
-.explore-tabs__tab {
-  padding: 0.5rem 0.9rem;
+/* Legacy's MonumentComponent and MonumentDescription (inventory-app#2424):
+   the place after the name in the title's own style; the tab bar as the
+   place page's, 10px under the title; a record's heading in Muli bold
+   16/18px navy, "In <project> <source>" normal with the project in italics;
+   the pictures a 550px grey stage, the caption a dark band under it, the
+   thumbnails 120px; each part 20px apart in Roboto Condensed 16/18px; the
+   related records each on a light shadow; the tab bar stacked below 900px. */
+.explore-monument__place { font-weight: normal; }
+.explore-theme-info { margin-bottom: 20px; }
+.explore-monument-menu {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  height: 55px;
+  margin: 10px 0 20px;
+  border-bottom: 2px solid #979797;
+}
+.explore-monument-menu__item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 150px;
+  height: 50px;
+  margin: 5px 10px 0;
+  padding: 0 0 12px;
   border: 0;
-  background: #e6efec;
-  color: var(--explore-green);
-  font: inherit;
-  font-weight: 600;
-  text-transform: uppercase;
+  border-bottom: 5px solid transparent;
+  background: none;
+  font-family: 'Muli', sans-serif;
+  font-weight: bold;
+  font-size: 18px;
+  line-height: 23px;
+  color: #979797;
+  text-align: center;
   cursor: pointer;
 }
-.explore-tabs__tab--active { background: var(--explore-green); color: #ffffff; }
-.explore-tabs__panel { padding-top: var(--mwnf-space); }
-.explore-monument__source { margin: 0 0 0.5rem; color: var(--mwnf-color-muted); font-style: italic; }
-.explore-monument__name { color: var(--explore-navy); font-weight: 400; font-size: 1.5rem; margin: var(--mwnf-space) 0 0.5rem; }
-.explore-monument__subheading { color: var(--explore-navy); font-size: 1.125rem; }
-.explore-monument__fields { display: grid; grid-template-columns: max-content 1fr; gap: 0.25rem var(--mwnf-space); margin: 0 0 var(--mwnf-space); }
-.explore-monument__fields dt { font-weight: 600; }
-.explore-monument__fields dd { margin: 0; }
-.explore-related + .explore-related { border-top: var(--mwnf-section-border); margin-top: var(--mwnf-space); }
+.explore-monument-menu__item--selected { color: var(--explore-green); border-bottom-color: var(--explore-green); }
+@media only screen and (max-width: 899px) {
+  .explore-monument-menu { flex-direction: column; align-items: stretch; height: auto; border-bottom: 0; }
+  .explore-monument-menu__item { width: 100%; margin: 5px 0 0; border-bottom-color: #e2e2e2; }
+  .explore-monument-menu__item--selected { border-bottom-color: var(--explore-green); }
+}
+.explore-monument .explore-map { margin-top: 0; }
+.explore-monument__header { font-family: 'Muli', sans-serif; font-weight: bold; font-size: 16px; line-height: 18px; color: var(--explore-navy); }
+.explore-monument__source { font-weight: normal; }
+.explore-monument__source span { font-style: italic; }
+.explore-monument__header--button { cursor: pointer; }
+.explore-monument__entry { margin-top: 20px; }
+.explore-monument__related { padding: 15px 10px; box-shadow: 0 2px 8px var(--explore-light-grey); }
+.explore-monument__panel,
+.explore-monument__panel .explore-entry *,
+.explore-monument__fields * {
+  font-family: 'Roboto Condensed', sans-serif;
+  font-size: 16px;
+  line-height: 18px;
+  color: #4a4a4a;
+}
+.explore-monument__panel .explore-monument__header,
+.explore-monument__panel .explore-monument__header * { font-family: 'Muli', sans-serif; color: var(--explore-navy); }
+.explore-monument__fields .explore-read-in { margin-bottom: 20px; }
+.explore-field__label--inline { display: inline; }
+.explore-entry__part { margin-bottom: 20px; }
+.explore-entry__photos { display: flex; flex-wrap: wrap; width: 100%; }
+.explore-entry__main-photo { width: 100%; height: 550px; background: #e2e2e2; cursor: zoom-in; }
+.explore-entry__main-photo img { width: 100%; height: 100%; object-fit: contain; }
+.explore-monument__panel .explore-entry__caption {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 50px;
+  margin-bottom: 20px;
+  padding: 10px;
+  background: #4a4a4a;
+  color: #ffffff;
+  text-align: center;
+}
+.explore-entry__thumbnails { display: flex; justify-content: center; gap: 20px; width: 100%; height: 120px; padding: 0 40px; overflow-x: auto; }
+.explore-entry__thumbnail { flex: 0 0 120px; width: 120px; height: 120px; padding: 0; border: 0; background: none; cursor: pointer; }
+.explore-entry__thumbnail img { width: 100%; height: 100%; object-fit: cover; }
+.explore-entry__thumbnail--current { border: 6px solid var(--explore-green); }
+.explore-entry__lightbox { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; background: rgb(0 0 0 / 90%); }
+.explore-entry__lightbox img { width: 90%; height: 90%; object-fit: contain; }
+.explore-entry__lightbox-button { position: absolute; width: 45px; height: 45px; border: 0; background: none; color: rgb(255 255 255 / 60%); font-size: 40px; cursor: pointer; }
+.explore-entry__lightbox-button--left { left: 10px; }
+.explore-entry__lightbox-button--right { right: 10px; }
+.explore-entry__label { margin-bottom: 5px; }
+.explore-entry__authors,
+.explore-entry__bibliography { margin-bottom: 20px; }
+.explore-monument__panel .explore-entry__citation-label { font-weight: bold; }
+@media only screen and (max-width: 849px) {
+  .explore-entry__main-photo { height: 475px; }
+}
+@media only screen and (max-width: 649px) {
+  .explore-entry__main-photo { height: 400px; }
+}
+.explore-monument-itinerary { display: flex; flex-direction: column; width: 100%; }
+.explore-monument-itinerary__parent { margin-bottom: 10px; font-family: 'Muli', sans-serif; font-weight: bold; font-size: 18px; line-height: 23px; color: var(--explore-navy); }
 
 /* ── Maps ───────────────────────────────────────────────────────────────── */
 
-.explore-map { height: 24rem; margin: var(--mwnf-space) 0; border: 1px solid var(--mwnf-color-border); z-index: 0; }
+/* Legacy's #explore-map: 500px, 30px under the title, 40px over what follows; 400px, 20px under, below 500px. */
+.explore-map { height: 500px; margin: 30px 0 40px; z-index: 0; }
+@media only screen and (max-width: 499px) {
+  .explore-map { height: 400px; margin-top: 20px; }
+}
 .explore-map__popup a { color: var(--explore-green); }
 
 /* ── Itineraries ────────────────────────────────────────────────────────── */
@@ -403,25 +619,158 @@
 .explore-itinerary__body { flex: 1; min-width: 0; }
 .explore-itinerary__name { margin: 0 0 0.5rem; color: var(--explore-navy); font-size: 1.25rem; }
 .explore-itinerary__name a { color: var(--explore-green); }
-.explore-itinerary__duration { color: var(--mwnf-color-muted); font-size: 1rem; }
 .explore-itinerary__description { margin: 0 0 0.5rem; }
 .explore-itinerary__label { margin: var(--mwnf-space) 0 0.25rem; font-size: 1rem; }
 .explore-itinerary__record { margin: 0; }
 .explore-itinerary__record a { color: var(--explore-green); }
 .explore-subs__heading { font-size: 1.5rem; margin: calc(var(--mwnf-space) * 2) 0 var(--mwnf-space); }
-.explore-sub__label { font-size: 1.25rem; margin: calc(var(--mwnf-space) * 2) 0 var(--mwnf-space); }
-.explore-sub__tabs { display: flex; flex-wrap: wrap; gap: 0.25rem; margin: 0 0 var(--mwnf-space); }
-.explore-sub__tab {
-  padding: 0.5rem 0.9rem;
-  border: 0;
-  background: #e6efec;
+
+/* Legacy's texts (explore-client DescriptionComponent, SubItineraryList.vue,
+   inventory-app#2424): "Read in" over the text, the text in Roboto Condensed
+   16/18px dark grey with "Read more." after it; the sub-itineraries' count in
+   the headings' Muli, bold, 28/35px navy, 30px above and 20px below; each
+   sub-itinerary a 200px card on a light shadow, its picture 300px wide and
+   whole, its numbered name in Muli 18/23px bold dark green, its start 20px
+   under it; taller below 900px, stacked below 700px. */
+.explore-read-in { margin-bottom: 10px; }
+.explore-read-in,
+.explore-read-in select,
+.explore-read-more,
+.explore-read-more * {
+  font-family: 'Roboto Condensed', sans-serif;
+  font-size: 16px;
+  line-height: 18px;
+  color: #4a4a4a;
+}
+.explore-read-more { margin-bottom: 20px; }
+.explore-read-more__toggle { font-weight: bold; text-decoration: underline; cursor: pointer; }
+.explore-subs .explore-subs__heading {
+  margin: 30px 0 20px;
+  font-family: var(--mwnf-font-body);
+  font-size: 28px;
+  line-height: 35px;
+  font-weight: 700;
+  color: var(--explore-navy);
+}
+.explore-sub-card {
+  display: flex;
+  height: 200px;
+  width: 100%;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px var(--explore-light-grey);
+}
+/* 300px wide, shrinking with the text beside it, as legacy's (its info takes 100%). */
+.explore-sub-card__image {
+  flex: 0 1 auto;
+  width: 300px;
+  height: 200px;
+  background-color: var(--explore-green);
+  background-position: center;
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+.explore-sub-card__info { flex: 0 1 auto; width: 100%; min-width: 0; padding: 20px 30px; }
+.explore-sub-card__link {
+  font-family: var(--mwnf-font-body);
+  font-size: 18px;
+  line-height: 23px;
+  font-weight: 700;
   color: var(--explore-green);
-  font: inherit;
-  font-weight: 600;
-  text-transform: uppercase;
+  text-decoration: none;
+}
+.explore-sub-card__description {
+  margin-top: 20px;
+  font-family: 'Roboto Condensed', sans-serif;
+  font-size: 16px;
+  line-height: 18px;
+  color: #4a4a4a;
+}
+@media only screen and (max-width: 899px) {
+  .explore-sub-card { height: 300px; }
+  .explore-sub-card__image { width: 400px; height: 300px; }
+}
+@media only screen and (max-width: 699px) {
+  .explore-sub-card { flex-direction: column; height: auto; }
+  .explore-sub-card__image { height: 200px; width: 100%; }
+}
+@media only screen and (max-width: 499px) {
+  .explore-subs .explore-subs__heading { font-size: 20px; line-height: 25px; }
+  .explore-sub-card__info { padding: 15px; }
+}
+/* Legacy's SubItinerary (inventory-app#2424): the text 30px over the list,
+   its author 10px under it; the list's label in the headings' Muli, bold,
+   28/35px navy, 30px over the tabs; the location tabs 150px wide in Muli
+   18/23px grey over a medium-light grey rule, the chosen one dark green and
+   underlined 5px, centred up to five, 20px over the map; the historical
+   background in Roboto Condensed 16/18px, as on a location's page. */
+.explore-sub__description { margin-bottom: 30px; }
+.explore-sub__author { margin: 10px 0 0; font-family: 'Roboto Condensed', sans-serif; font-size: 16px; line-height: 18px; color: #4a4a4a; }
+.explore-sub .explore-sub__label {
+  margin: 0 0 30px;
+  font-family: 'Muli', sans-serif;
+  font-weight: bold;
+  font-size: 28px;
+  line-height: 35px;
+  color: var(--explore-navy);
+}
+.explore-sub__tabs-wrap {
+  position: relative;
+  min-height: 50px;
+  margin: 0 0 20px;
+  padding: 0 30px;
+  border-bottom: 1px solid #979797;
+}
+.explore-sub__tabs { display: flex; justify-content: center; height: 100%; overflow: hidden; }
+.explore-sub__tabs-wrap--arrows .explore-sub__tabs { justify-content: flex-start; }
+.explore-sub__arrow {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+  width: 28px;
+  padding: 0;
+  border: 0;
+  background: #6a6a6a;
+  color: #ffffff;
   cursor: pointer;
 }
-.explore-sub__tab--active { background: var(--explore-green); color: #ffffff; }
+.explore-sub__arrow--left { left: 0; }
+.explore-sub__arrow--right { right: 0; }
+@media only screen and (max-width: 899px) {
+  .explore-sub__arrow { display: none; }
+  .explore-sub__tabs { flex-direction: column; overflow: visible; }
+  .explore-sub__tab { width: 100%; flex-basis: auto; margin: 5px 0 0; }
+}
+.explore-sub__tab {
+  display: flex;
+  flex: 0 0 150px;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 150px;
+  min-height: 50px;
+  margin: 5px 5px 0;
+  padding: 0 0 12px;
+  border: 0;
+  border-bottom: 5px solid transparent;
+  background: none;
+  font-family: 'Muli', sans-serif;
+  font-weight: bold;
+  font-size: 18px;
+  line-height: 23px;
+  color: #979797;
+  text-align: center;
+  cursor: pointer;
+}
+.explore-sub__tab--active { color: var(--explore-green); border-bottom-color: var(--explore-green); }
+.explore-sub .explore-map { margin-top: 0; }
+.explore-background,
+.explore-background * {
+  font-family: 'Roboto Condensed', sans-serif;
+  font-size: 16px;
+  line-height: 18px;
+  color: #4a4a4a;
+}
 .explore-team { margin: calc(var(--mwnf-space) * 2) 0; }
 .explore-team__toggle { padding: 0; border: 0; background: none; color: var(--explore-green); font: inherit; font-weight: 600; cursor: pointer; }
 .explore-routes { margin: calc(var(--mwnf-space) * 2) 0; scroll-margin-top: var(--mwnf-space); }
@@ -434,3 +783,150 @@
 }
 .explore-monument__back { margin: 0 0 0.5rem; }
 .explore-monument__back a { color: var(--explore-green); font-weight: 600; }
+
+/* ── Search results ─────────────────────────────────────────────────────── */
+
+/* Legacy's SearchResults and PagesComponent (inventory-app#2424): the page
+   white and padded 50px; the two modes as navy tabs over the term, the one
+   not chosen darkened, 70% wide (80% below 1350px, 90% below 1200px, whole
+   below 950px), "Important Information" under them; Google's results as wide;
+   the record the pointer rests on in a quarter column, the results two to a
+   row beside it, each its 150x120 picture and its line in dark green; the
+   pager's words underlined, centred, 30px around it. */
+.explore-search-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: -24px -40px;
+  padding: 50px;
+  background: #ffffff;
+  font-family: 'Roboto Condensed', sans-serif;
+  font-size: 16px;
+  line-height: 18px;
+  color: #4a4a4a;
+}
+.explore-search-page__box { display: flex; flex-direction: column; align-items: center; width: 70%; padding: 0 15px; margin-bottom: 50px; }
+.explore-search-page__types { position: relative; display: flex; justify-content: space-evenly; width: 80%; }
+.explore-search-page__type {
+  position: relative;
+  width: 50%;
+  height: 50px;
+  margin: 0 5px;
+  border: 2px solid var(--explore-navy);
+  border-bottom: 0;
+  border-radius: 10px 10px 0 0;
+  background-color: var(--explore-navy);
+  color: #ffffff;
+  font: inherit;
+  font-weight: bold;
+  cursor: pointer;
+}
+.explore-search-page__type::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 10px 10px 0 0;
+  background-color: rgb(0 0 0 / 30%);
+}
+.explore-search-page__type--selected::before { background-color: transparent; }
+.explore-search-page__form { display: flex; width: 100%; }
+.explore-search-page__input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 50px;
+  margin-right: 5px;
+  padding: 6px 10px;
+  border: 1px solid var(--explore-navy);
+  border-radius: 5px;
+  box-shadow: inset 0 1px 4px rgb(0 0 0 / 25%);
+  font: inherit;
+}
+.explore-search-page__input::placeholder { font-family: 'Muli', sans-serif; font-size: 18px; line-height: 23px; color: #858585; }
+.explore-search-page__submit { padding: 0 12px; border: 1px solid var(--explore-navy); background: var(--explore-navy); color: #ffffff; cursor: pointer; }
+.explore-search-page__box a { margin: 10px; color: var(--explore-navy); }
+.explore-search-page__message { margin: 10px 0 0; color: #ffffff; background: var(--explore-navy); padding: 5px 10px; }
+.explore-search-page__google { width: 70%; }
+.explore-search-results { display: flex; justify-content: center; align-items: flex-start; width: 100%; padding: 0 50px; box-sizing: border-box; }
+.explore-search-results__main { width: 25%; padding: 30px 0; }
+.explore-search-results__main-image { display: block; width: 100%; max-height: 400px; margin-bottom: 15px; object-fit: contain; }
+.explore-search-results__main-name { margin: 0 0 15px; }
+.explore-search-results__bold { font-weight: bold; }
+.explore-search-results__main p { margin: 0; }
+.explore-search-results__project { font-style: italic; }
+.explore-search-results__list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px 30px; width: 75%; padding: 30px 0 30px 40px; box-sizing: border-box; }
+.explore-search-results__result { display: flex; align-items: center; min-height: 120px; }
+.explore-search-results__result a { color: var(--explore-green); text-decoration: none; }
+.explore-search-results__image img { display: block; width: 150px; height: 120px; object-fit: contain; border: 1px solid rgb(133 133 133 / 20%); }
+.explore-search-results__details { display: flex; flex-direction: column; align-items: flex-start; height: 100%; padding-left: 10px; }
+.explore-search-results__details a { margin-bottom: 5px; }
+.explore-search-results__details a:hover { text-decoration: underline; }
+.explore-search-results__name { font-weight: bold; }
+.explore-search-page__none { padding: 50px 50px 0; margin: 0; }
+.explore-pages { display: flex; align-items: center; justify-content: center; margin-bottom: 30px; }
+.explore-pages--top { margin-top: 30px; margin-bottom: 0; }
+.explore-pages__numbers { display: flex; align-items: center; }
+.explore-pages__button { margin: 0 5px; padding: 5px; border: 0; background: none; font: inherit; color: inherit; text-decoration: underline; cursor: pointer; }
+.explore-pages__button:disabled { cursor: default; }
+@media only screen and (max-width: 1349px) {
+  .explore-search-page__box,
+  .explore-search-page__google { width: 80%; }
+}
+@media only screen and (max-width: 1199px) {
+  .explore-search-page__box,
+  .explore-search-page__google { width: 90%; }
+  .explore-search-results__result { min-height: 175px; }
+  .explore-search-results__image img { width: 120px; height: 175px; }
+}
+@media only screen and (max-width: 974px) {
+  .explore-search-results__main { display: none; }
+  .explore-search-results__list { width: 100%; padding-left: 0; }
+  .explore-search-results__result { min-height: 135px; }
+  .explore-search-results__image img { width: 150px; height: 135px; }
+}
+@media only screen and (max-width: 949px) {
+  .explore-search-page__box,
+  .explore-search-page__google { width: 100%; }
+  .explore-search-page__input::placeholder { font-size: 16px; line-height: 18px; }
+}
+@media only screen and (max-width: 849px) {
+  .explore-search-results__result { min-height: 175px; }
+  .explore-search-results__image img { height: 175px; }
+}
+@media only screen and (max-width: 749px) {
+  .explore-search-page,
+  .explore-search-page__box { padding: 30px; }
+  .explore-search-page__box { margin-bottom: 15px; }
+}
+@media only screen and (max-width: 724px) {
+  .explore-search-page__types { width: 95%; }
+  .explore-search-results__list { display: flex; flex-direction: column; padding-bottom: 20px; }
+  .explore-search-results__result { width: 100%; min-height: 200px; margin-bottom: 20px; }
+  .explore-search-results__image { width: 38%; }
+  .explore-search-results__image img { width: 100%; height: 200px; }
+  .explore-search-results__details { width: 62%; }
+}
+@media only screen and (max-width: 599px) {
+  .explore-search-results { padding: 0 30px; }
+  .explore-search-page__none { padding: 30px 30px 0; }
+}
+@media only screen and (max-width: 499px) {
+  .explore-search-page__types { font-size: 14px; line-height: 16px; }
+  .explore-search-results__result { flex-direction: column; min-height: 250px; }
+  .explore-search-results__image { width: 100%; }
+  .explore-search-results__details { width: 100%; padding-left: 0; margin-top: 10px; }
+}
+
+/* Legacy's link-styles: the links inside its texts in pure blue, underlined on hover. */
+.explore-description .explore-prose a,
+.explore-read-more a,
+.explore-field__value a,
+.explore-additional a,
+.explore-entry a {
+  color: #0000ff;
+  text-decoration: none;
+}
+.explore-description .explore-prose a:hover,
+.explore-read-more a:hover,
+.explore-field__value a:hover,
+.explore-additional a:hover,
+.explore-entry a:hover { text-decoration: underline; }
