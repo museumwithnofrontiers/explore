@@ -455,6 +455,10 @@ describe('website smoke test', () => {
       'Church of Nossa Senhora da Graça',
     ])
     expect(host.querySelectorAll('.explore-map path.leaflet-interactive').length).toBeGreaterThan(0)
+    // Its text is a Travels itinerary's, credited to that itinerary's authors, as legacy did.
+    expect(host.querySelector('.explore-sub__author')?.textContent.trim()).toBe(
+      'Author: Pedro Dias, Dalila Rodrigues, Nuno Vassallo e Silva, Fernando Grilo',
+    )
     app.unmount()
   }, 60000)
 
