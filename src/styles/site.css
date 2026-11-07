@@ -401,34 +401,100 @@
 .explore-page__text { margin: var(--mwnf-space) 0; }
 .explore-page__credit { font-style: italic; color: var(--mwnf-color-muted); }
 
-.explore-tiles { margin: calc(var(--mwnf-space) * 2) 0; }
-.explore-tiles__heading { font-size: 1.75rem; margin: 0 0 var(--mwnf-space); }
+/* Legacy's "Explore by …" tiles (ExplorePage .explore-next-tile) and a
+   sub-itinerary's monuments (SubItinerary .monument-tile): the heading in the
+   headings' Muli bold 28/35px navy, 20px over the tiles; three across 20px
+   apart, 200px high, rounded 10px. A place's tile dark green under a 30%
+   grey shade, a country's picture under a 50% one, the name over it in Muli
+   bold 32/40px white, centred; a monument's picture with no shade and 50px
+   under it, its name under it in Muli bold 16/18px dark green. Two across
+   below 950px (the name 28/35px), 150px high below 650px (20/25px), one
+   column below 500px. */
+.explore-tiles { width: 100%; }
+.explore-tiles__heading {
+  margin: 0 0 20px;
+  font-family: 'Mulish', 'Muli', sans-serif;
+  font-size: 28px;
+  line-height: 35px;
+  font-weight: bold;
+  color: var(--explore-navy);
+}
 .explore-tiles__list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
-  gap: 0.5rem;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
   list-style: none;
   margin: 0;
   padding: 0;
 }
+.explore-tiles__item { position: relative; }
 .explore-tiles__tile {
   position: relative;
   display: flex;
-  align-items: flex-end;
-  min-height: 5rem;
-  height: 100%;
-  padding: 0.5rem;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  width: 100%;
+  padding: 20px;
   overflow: hidden;
-  background: var(--explore-green);
+  border-radius: 10px;
+  background-color: var(--explore-green);
   color: #ffffff;
+  text-align: center;
   text-decoration: none;
 }
-.explore-tiles__tile:hover,
-.explore-tiles__tile:focus-visible { background: var(--explore-navy); }
-.explore-tiles__tile--picture { min-height: 8rem; }
-.explore-tiles__image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.explore-tiles__tile--picture .explore-tiles__label { position: relative; padding: 0.1rem 0.4rem; background: rgb(0 0 0 / 55%); }
-.explore-tiles__label { font-size: 1rem; }
+.explore-tiles__image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* Legacy's shade (an inset shadow over the tile's background), over the picture. */
+.explore-tiles__tile::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgb(74 74 74 / 30%);
+}
+.explore-tiles--country .explore-tiles__tile::after { background: rgb(74 74 74 / 50%); }
+.explore-tiles--monument .explore-tiles__tile::after { content: none; }
+.explore-tiles__label {
+  position: relative;
+  z-index: 1;
+  font-family: 'Mulish', 'Muli', sans-serif;
+  font-size: 32px;
+  line-height: 40px;
+  font-weight: bold;
+  color: #ffffff;
+}
+.explore-tiles--monument .explore-tiles__item { margin-bottom: 50px; }
+.explore-tiles__name {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  padding-top: 5px;
+  font-family: 'Mulish', 'Muli', sans-serif;
+  font-size: 16px;
+  line-height: 18px;
+  font-weight: bold;
+  text-align: left;
+  color: var(--explore-green);
+  text-decoration: none;
+}
+@media only screen and (max-width: 949px) {
+  .explore-tiles__list { grid-template-columns: repeat(2, 1fr); }
+  .explore-tiles__label { font-size: 28px; line-height: 35px; }
+}
+@media only screen and (max-width: 649px) {
+  .explore-tiles__tile { height: 150px; }
+  .explore-tiles__label { font-size: 20px; line-height: 25px; }
+}
+@media only screen and (max-width: 499px) {
+  .explore-tiles__heading { font-size: 20px; line-height: 25px; }
+  .explore-tiles__list { grid-template-columns: 1fr; }
+  .explore-tiles--monument .explore-tiles__item { margin-bottom: 30px; }
+}
 
 /* Legacy's ExplorePage texts and tab menu (inventory-app#2424): the
    description 40px over what follows, its "Read in" 10px over it; the menu a
@@ -469,7 +535,7 @@
   border: 0;
   border-bottom: 5px solid transparent;
   background: none;
-  font-family: 'Muli', sans-serif;
+  font-family: 'Mulish', 'Muli', sans-serif;
   font-weight: bold;
   font-size: 18px;
   line-height: 23px;
@@ -490,15 +556,58 @@
 .explore-place-menu .explore-background__toggle { display: inline-block; margin-top: 20px; font-weight: bold; color: #4a4a4a; cursor: pointer; }
 
 
-.explore-travel { margin: calc(var(--mwnf-space) * 2) 0; }
-.explore-travel__heading { font-size: 1.5rem; margin: 0 0 var(--mwnf-space); }
-.explore-travel__record { display: flex; gap: var(--mwnf-space); padding: var(--mwnf-space) 0; border-top: var(--mwnf-section-border); }
-.explore-travel__image { flex: 0 0 9rem; width: 9rem; height: 6rem; object-fit: cover; }
-.explore-travel__body { flex: 1; min-width: 0; }
-.explore-travel__title { margin: 0 0 0.25rem; font-size: 1.125rem; }
-.explore-travel__title a { color: var(--explore-green); }
-.explore-travel__subtitle { margin: 0 0 0.25rem; color: var(--mwnf-color-muted); }
+/* Legacy's BooksTours.vue: the label in the headings' Muli, bold, 28/35px
+   navy, 30px over it and 20px under; each record a 200px card with a light
+   shadow, 20px under it, its picture 165px wide (dark green where it has
+   none), its text 30px in, in Roboto Condensed 14/16px dark grey, the title
+   bold in the browser's link blue, the presentation 10px under it. Below
+   625px the card stacks, its picture 175px high and contained. */
+.explore-travel { width: 100%; }
+.explore-travel__heading {
+  margin: 30px 0 20px;
+  font-family: 'Mulish', 'Muli', sans-serif;
+  font-size: 28px;
+  line-height: 35px;
+  font-weight: bold;
+  color: var(--explore-navy);
+}
+.explore-travel__record {
+  display: flex;
+  height: 200px;
+  width: 100%;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px var(--explore-light-grey);
+}
+/* Legacy gave the picture 165px and the text 100% of the card, so the picture
+   gives way: about 140px on the 1366px page. Kept as legacy's widths. */
+.explore-travel__image {
+  width: 165px;
+  height: 100%;
+  background-color: var(--explore-green);
+  background-position: center;
+  background-size: cover;
+}
+.explore-travel__body {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  padding: 30px;
+  font-family: 'Roboto Condensed', sans-serif;
+  font-size: 14px;
+  line-height: 16px;
+  color: #4a4a4a;
+}
+.explore-travel__title { font-weight: bold; color: #0000ee; text-decoration: none; }
+a.explore-travel__title:hover { text-decoration: underline; }
+.explore-travel__intro { margin-top: 10px; }
 .explore-travel__intro > :first-child { margin-top: 0; }
+.explore-travel__intro > :last-child { margin-bottom: 0; }
+@media only screen and (max-width: 624px) {
+  .explore-travel__heading { font-size: 20px; line-height: 25px; }
+  .explore-travel__record { flex-direction: column; height: auto; }
+  .explore-travel__image { flex: none; width: 100%; height: 175px; background-size: contain; background-repeat: no-repeat; }
+  .explore-travel__body { height: auto; }
+}
 
 /* ── The monument ───────────────────────────────────────────────────────── */
 
@@ -531,7 +640,7 @@
   border: 0;
   border-bottom: 5px solid transparent;
   background: none;
-  font-family: 'Muli', sans-serif;
+  font-family: 'Mulish', 'Muli', sans-serif;
   font-weight: bold;
   font-size: 18px;
   line-height: 23px;
@@ -546,7 +655,7 @@
   .explore-monument-menu__item--selected { border-bottom-color: var(--explore-green); }
 }
 .explore-monument .explore-map { margin-top: 0; }
-.explore-monument__header { font-family: 'Muli', sans-serif; font-weight: bold; font-size: 16px; line-height: 18px; color: var(--explore-navy); }
+.explore-monument__header { font-family: 'Mulish', 'Muli', sans-serif; font-weight: bold; font-size: 16px; line-height: 18px; color: var(--explore-navy); }
 .explore-monument__source { font-weight: normal; }
 .explore-monument__source span { font-style: italic; }
 .explore-monument__header--button { cursor: pointer; }
@@ -561,7 +670,7 @@
   color: #4a4a4a;
 }
 .explore-monument__panel .explore-monument__header,
-.explore-monument__panel .explore-monument__header * { font-family: 'Muli', sans-serif; color: var(--explore-navy); }
+.explore-monument__panel .explore-monument__header * { font-family: 'Mulish', 'Muli', sans-serif; color: var(--explore-navy); }
 .explore-monument__fields .explore-read-in { margin-bottom: 20px; }
 .explore-field__label--inline { display: inline; }
 .explore-entry__part { margin-bottom: 20px; }
@@ -601,7 +710,7 @@
   .explore-entry__main-photo { height: 400px; }
 }
 .explore-monument-itinerary { display: flex; flex-direction: column; width: 100%; }
-.explore-monument-itinerary__parent { margin-bottom: 10px; font-family: 'Muli', sans-serif; font-weight: bold; font-size: 18px; line-height: 23px; color: var(--explore-navy); }
+.explore-monument-itinerary__parent { margin-bottom: 10px; font-family: 'Mulish', 'Muli', sans-serif; font-weight: bold; font-size: 18px; line-height: 23px; color: var(--explore-navy); }
 
 /* ── Maps ───────────────────────────────────────────────────────────────── */
 
@@ -707,7 +816,7 @@
 .explore-sub__author { margin: 10px 0 0; font-family: 'Roboto Condensed', sans-serif; font-size: 16px; line-height: 18px; color: #4a4a4a; }
 .explore-sub .explore-sub__label {
   margin: 0 0 30px;
-  font-family: 'Muli', sans-serif;
+  font-family: 'Mulish', 'Muli', sans-serif;
   font-weight: bold;
   font-size: 28px;
   line-height: 35px;
@@ -757,7 +866,7 @@
   border: 0;
   border-bottom: 5px solid transparent;
   background: none;
-  font-family: 'Muli', sans-serif;
+  font-family: 'Mulish', 'Muli', sans-serif;
   font-weight: bold;
   font-size: 18px;
   line-height: 23px;
@@ -774,8 +883,25 @@
   line-height: 18px;
   color: #4a4a4a;
 }
-.explore-team { margin: calc(var(--mwnf-space) * 2) 0; }
-.explore-team__toggle { padding: 0; border: 0; background: none; color: var(--explore-green); font: inherit; font-weight: 600; cursor: pointer; }
+/* Legacy's local team (SubItinerary/SubItineraryList #…-local-team-toggle):
+   its texts' Roboto Condensed, 18/23px bold, underlined, dark green, 20px
+   over the team; the team 16/18px. */
+.explore-team { margin: 0; }
+.explore-team__toggle {
+  display: block;
+  margin-bottom: 20px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: 'Roboto Condensed', sans-serif;
+  font-size: 18px;
+  line-height: 23px;
+  font-weight: bold;
+  text-decoration: underline;
+  color: var(--explore-green);
+  cursor: pointer;
+}
+.explore-team__text { font-family: 'Roboto Condensed', sans-serif; font-size: 16px; line-height: 18px; color: #4a4a4a; }
 .explore-routes { margin: calc(var(--mwnf-space) * 2) 0; scroll-margin-top: var(--mwnf-space); }
 .explore-routes__heading { font-size: 1.5rem; margin: 0 0 var(--mwnf-space); }
 .explore-routes__select { max-width: 24rem; padding: 0.4rem; font: inherit; }
@@ -844,7 +970,7 @@
   box-shadow: inset 0 1px 4px rgb(0 0 0 / 25%);
   font: inherit;
 }
-.explore-search-page__input::placeholder { font-family: 'Muli', sans-serif; font-size: 18px; line-height: 23px; color: #858585; }
+.explore-search-page__input::placeholder { font-family: 'Mulish', 'Muli', sans-serif; font-size: 18px; line-height: 23px; color: #858585; }
 .explore-search-page__submit { padding: 0 12px; border: 1px solid var(--explore-navy); background: var(--explore-navy); color: #ffffff; cursor: pointer; }
 .explore-search-page__box a { margin: 10px; color: var(--explore-navy); }
 .explore-search-page__message { margin: 10px 0 0; color: #ffffff; background: var(--explore-navy); padding: 5px 10px; }
@@ -933,3 +1059,12 @@
 .explore-field__value a:hover,
 .explore-additional a:hover,
 .explore-entry a:hover { text-decoration: underline; }
+
+/* Legacy's glossary links in a text (DescriptionComponent .glossary-link):
+   its link-styles, opening the term's window. */
+.explore-page .gloss-term {
+  color: #0000ff;
+  text-decoration: none;
+  cursor: pointer;
+}
+.explore-page .gloss-term:hover { text-decoration: underline; }

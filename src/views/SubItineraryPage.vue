@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { NotFoundView, isRtl, useI18n } from '@museumwnf/viewer-core'
+import { GlossaryPopover } from '@museumwnf/viewer-layout/content'
 import ExploreFrame from '../components/ExploreFrame.vue'
 import ExploreMap from '../components/ExploreMap.vue'
 import ExploreTiles from '../components/ExploreTiles.vue'
@@ -13,9 +14,9 @@ import ReadMoreText from '../components/ReadMoreText.vue'
 import TravelRecords from '../components/TravelRecords.vue'
 import {
   collectionById, countryOf, describedLanguages, isSubItinerary, itinerariesLink, itineraryCountries, itineraryLink,
-  itineraryLocations, itineraryMonuments, legacyCut, legacyId, monumentLink, monumentName, ownText, placeLink,
-  placePosition, positionOf, roman, routeKind, subItinerariesOf, text, title, travelFor, useCollectionLanguages,
-  useTexts,
+  itineraryLocations, itineraryMonuments, legacyCut, localTeamOf, monumentLink, monumentName, ownText, placeLink,
+  placePosition, positionOf, roman, routeKind, subItinerariesOf, text, title, travelForItinerary, useCollectionLanguages,
+  useTextGlossary, useTexts,
 } from '../composables/explore.js'
 import { usePhoneTabs } from '../composables/phoneTabs.js'
 
@@ -58,6 +59,8 @@ const language = computed(() =>
 )
 const dir = computed(() => (isRtl(language.value) ? 'rtl' : ''))
 const own = computed(() => ownText('collections', itinerary.value?.id, language.value))
+// The glossary terms its text reaches, as legacy marked them.
+const { glossary, active, onClick, close, activeHtml } = useTextGlossary(() => own.value.description, () => language.value)
 const english = computed(() => text('collections', itinerary.value?.id, 'en'))
 // Legacy credits a text taken from a Travels itinerary to that itinerary's
 // author (`travels_author`, empty when it names none), Explore's own to Explore's.
@@ -115,16 +118,9 @@ function pick(entry) {
   router.push({ query: { ...route.query, location: entry.id } })
 }
 
-// The Travel Books and Tours of its locations, each once.
-const travel = computed(() => {
-  const seen = { books: new Map(), tours: new Map() }
-  for (const place of locations.value) {
-    const scoped = travelFor('location', legacyId(place))
-    for (const book of scoped.books) seen.books.set(book.id, book)
-    for (const tour of scoped.tours) seen.tours.set(tour.id, tour)
-  }
-  return { books: [...seen.books.values()], tours: [...seen.tours.values()] }
-})
+// Its Travel Books and Tours: those of the monuments it holds, as legacy's
+// ExploreItinerary gave a sub-itinerary's and a route's.
+const travel = computed(() => travelForItinerary(itinerary.value))
 
 const crumbs = computed(() => {
   const trail = [{ label: t('core.nav.home'), to: { name: 'home' } }]
@@ -160,11 +156,11 @@ const selection = computed(() =>
   <NotFoundView v-if="!itinerary" />
   <p v-else-if="!ready" class="explore-loading">{{ t('core.status.loading') }}</p>
   <ExploreFrame v-else :crumbs="crumbs" :selection="selection">
-    <article class="explore-page explore-sub">
+    <article class="explore-page explore-sub" @click="onClick">
       <h1 class="explore-page__title">{{ heading }}</h1>
       <div v-if="languages.length" class="explore-sub__description">
         <ReadIn :languages="languages" :language="language" @select="chosen = $event" />
-        <ReadMoreText :text="own.description ?? ''" :chars="DESCRIPTION_LENGTH" :dir="dir" />
+        <ReadMoreText :text="own.description ?? ''" :chars="DESCRIPTION_LENGTH" :dir="dir" :glossary="glossary" />
         <p v-if="author" class="explore-sub__author">{{ t('explore.itinerary.author') }} {{ author }}</p>
       </div>
 
@@ -200,10 +196,11 @@ const selection = computed(() =>
       <ExploreMap v-if="pins.length" :pins="pins" :zoom="placePosition(location)?.zoom ?? null" />
       <!-- Legacy's label here tested a field its data never had: it never showed. -->
       <LocationBackground :location="location" :label="false" />
-      <ExploreTiles :tiles="tiles" />
+      <ExploreTiles :tiles="tiles" kind="monument" />
 
-      <LocalTeam :team="own.extra?.local_team ?? ''" :dir="dir" />
+      <LocalTeam :team="localTeamOf(itinerary, translated)" :dir="dir" />
       <TravelRecords :books="travel.books" :tours="travel.tours" />
+      <GlossaryPopover :term="active" :html="activeHtml" @close="close" />
     </article>
   </ExploreFrame>
 </template>

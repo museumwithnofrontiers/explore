@@ -1,5 +1,8 @@
 import { computed, reactive, watch } from 'vue'
-import { entityRef, loadEntities, mdInline, mdStrip, siblingSiteUrl, useDataPackage, useI18n, useSiteConfig } from '@museumwnf/viewer-core'
+import {
+  entityRef, glossaryEntries, glossaryTermsForText, loadEntities, mdInline, mdStrip, renderBlock, siblingSiteUrl,
+  useDataPackage, useGlossaryPopup, useI18n, useSiteConfig,
+} from '@museumwnf/viewer-core'
 import newThemes from '../config/new-themes.json'
 
 // Explore's records, read the one way every website reads them: lazily, each
@@ -141,6 +144,28 @@ export function useCollectionLanguages(getCollection) {
     const id = getCollection()?.id
     return codes.filter((code) => loaded.has(`collections:${code}`) && pkg.translations('collections', code)[id])
   })
+}
+
+/**
+ * The glossary terms a text reaches, as legacy's DescriptionComponent marked
+ * them in an itinerary's and a sub-itinerary's text: every spelling of the
+ * glossary, in the text's own language, found in it (explore-api
+ * ItineraryTreeResource, ItinerarySubItineraryResource). Returns the spelling
+ * list the renderers take, and the popup legacy opened on a term. The route
+ * loads the glossary's records (`meta.entities`); its texts load here, in the
+ * language the text is read in.
+ */
+export function useTextGlossary(getText, getLanguage) {
+  watch(getLanguage, (lang) => { if (lang) loadTexts(['glossary'], lang) }, { immediate: true })
+  const terms = computed(() => {
+    const lang = getLanguage()
+    loaded.has(`glossary:${lang}`)
+    return glossaryTermsForText(getText() ?? '', lang)
+  })
+  const glossary = computed(() => glossaryEntries(terms.value))
+  const { active, onClick, close } = useGlossaryPopup(terms)
+  const activeHtml = computed(() => (active.value ? renderBlock(active.value.definition, { breaks: true }) : ''))
+  return { glossary, active, onClick, close, activeHtml }
 }
 
 /** Loads the texts a page reads, in the site language and in English; `true` once both are in. */
@@ -752,6 +777,52 @@ export function travelFor(level, id) {
     usefulWebsites: pick(travel.useful_websites).sort(byOrder),
     categories: [...(travel.accommodation_categories ?? [])].sort((a, b) => a.order - b.order),
   }
+}
+
+/**
+ * An itinerary's local team, as legacy's API gave it with every text of the
+ * itinerary (ExploreItinerary::getDescription): its own, in the first language
+ * that has one, else its parent itinerary's, the same way. English is read
+ * first; `codes` are the other languages whose texts are loaded.
+ */
+export function localTeamOf(itinerary, codes = []) {
+  const languages = [...new Set(['en', ...codes])]
+  for (const record of [itinerary, collectionById(itinerary?.parent_id)]) {
+    if (!record) continue
+    for (const code of languages) {
+      const team = ownText('collections', record.id, code).extra?.local_team
+      if (team) return team
+    }
+  }
+  return ''
+}
+
+/**
+ * The Explore monuments an itinerary holds: its own and its sub-itineraries'
+ * (legacy's `getMonumentsAsString`, explore_itineraries_rel_monuments of the
+ * itinerary and of its children).
+ */
+export function itineraryMonumentIds(itinerary) {
+  const ids = new Set()
+  for (const record of [itinerary, ...childrenOf(itinerary?.id)]) {
+    for (const member of record?.items ?? []) {
+      const id = member.extra?.explore_monument_id
+      if (id != null) ids.add(String(id))
+    }
+  }
+  return ids
+}
+
+/**
+ * The Travel Books and Tours of an itinerary, a sub-itinerary or a route:
+ * those scoped to any monument it holds, as legacy's ExploreItinerary did
+ * (`getTravelBook`/`getTour` by monument ids), each once.
+ */
+export function travelForItinerary(itinerary) {
+  const monuments = itineraryMonumentIds(itinerary)
+  const travel = siteRecords.value.explore_travel ?? {}
+  const pick = (list) => (list ?? []).filter((r) => (r.scope?.monuments ?? []).some((id) => monuments.has(String(id))))
+  return { books: pick(travel.books), tours: pick(travel.tours) }
 }
 
 /**

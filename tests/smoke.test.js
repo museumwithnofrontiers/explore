@@ -130,9 +130,10 @@ describe('website smoke test', () => {
     expect(host.querySelectorAll('.explore-travel--books .explore-travel__record')).toHaveLength(11)
     // Each book's cover, the one legacy picks from the Books database: Travel
     // Book 1 shows its English printed cover 2.
+    // Legacy drew it as the card's background (BooksTours.vue).
     const covers = [...host.querySelectorAll('.explore-travel--books .explore-travel__image')]
     expect(covers).toHaveLength(11)
-    expect(covers[0].getAttribute('src')).toBe('https://images.museumwnf.org/small/books/3/en/31/book/2.jpg')
+    expect(covers[0].style.backgroundImage).toContain('https://images.museumwnf.org/small/books/3/en/31/book/2.jpg')
     expect(host.querySelectorAll('.explore-travel--tours .explore-travel__record')).toHaveLength(14)
     expect(texts(host, '.explore-partnerships__title')).toEqual(['Barakat', 'European Union'])
     // Legacy's "Read in": the languages the introduction is written in.
@@ -194,7 +195,8 @@ describe('website smoke test', () => {
     const toledo = await collection('mwnf3_explore:location:337')
     const { app, host } = await mountOn(`#/location/${toledo.id}?theme=${theme.id}`, '.explore-tiles__tile')
 
-    const monuments = texts(host, '.explore-tiles__label')
+    // Legacy names a monument under its picture.
+    const monuments = texts(host, '.explore-tiles__name')
     expect(monuments).toHaveLength(12)
     expect(monuments).toContain('Mosque of Cristo de la Luz')
     app.unmount()
@@ -445,10 +447,10 @@ describe('website smoke test', () => {
 
   it("renders a sub-itinerary: its locations in legacy's order, each one's monuments", async () => {
     const sub = await collection('mwnf3_explore:itinerary:100')
-    const { app, host } = await mountOn(`#/sub-itinerary/${sub.id}`, '.explore-tiles__label')
+    const { app, host } = await mountOn(`#/sub-itinerary/${sub.id}`, '.explore-tiles__name')
     // Legacy wrote the tabs in capitals.
     expect(texts(host, '.explore-sub__tab')).toEqual(['SANTARÉM', 'GOLEGÃ', 'TORRES NOVAS', 'ATALAIA', 'TOMAR', 'DORNES'])
-    expect(texts(host, '.explore-tiles__label')).toEqual([
+    expect(texts(host, '.explore-tiles__name')).toEqual([
       'Church of Santa Maria de Marvila',
       'Municipal Museum',
       'Torre das Cabaças',
@@ -462,6 +464,41 @@ describe('website smoke test', () => {
     app.unmount()
   }, 60000)
 
+  // The final comparison with legacy (inventory-app#2491).
+  it('opens the only country of a theme covering one, as legacy skipped the theme level', async () => {
+    const theme = await collection('mwnf3_explore:thematiccycle:11')
+    const page = await mountOn(`#/theme/${theme.id}`, '.explore-tiles__tile')
+    expect(page.router.currentRoute.value.name).toBe('country')
+    expect(page.router.currentRoute.value.query.theme).toBe(theme.id)
+    expect(page.host.querySelector('.explore-page__title').textContent.trim()).toBe('Palestine')
+    page.app.unmount()
+  }, 60000)
+
+  it("gives an itinerary its monuments' Travel Books and Tours, and marks its glossary terms", async () => {
+    const itinerary = await collection('mwnf3_explore:itinerary:4')
+    const page = await mountOn(`#/itinerary/${itinerary.id}`, '.explore-sub-card')
+    expect(page.host.querySelectorAll('.explore-travel--books .explore-travel__record')).toHaveLength(1)
+    expect(page.host.querySelectorAll('.explore-travel--tours .explore-travel__record')).toHaveLength(3)
+    // Legacy's BooksTours: no subtitle line under a record's title.
+    expect(page.host.querySelector('.explore-travel__subtitle')).toBeNull()
+    await vi.waitFor(() => expect(texts(page.host, '.explore-page__text .gloss-term')).toContain('Reconquista'), { timeout: 30000 })
+    page.app.unmount()
+
+    // A country's list gives each itinerary its own, the same way.
+    const spain = await collection('mwnf3_explore:country:es')
+    const list = await mountOn(`#/country/${spain.id}/itineraries`, '.explore-itinerary')
+    expect(list.host.querySelectorAll('.explore-itinerary__record').length).toBeGreaterThan(0)
+    list.app.unmount()
+  }, 90000)
+
+  it("shows a sub-itinerary's local team, its parent's where it has none", async () => {
+    const sub = await collection('mwnf3_explore:itinerary:5')
+    const page = await mountOn(`#/sub-itinerary/${sub.id}`, '.explore-tiles__name')
+    expect(page.host.querySelector('.explore-team__toggle')).not.toBeNull()
+    expect(page.host.querySelectorAll('.explore-travel--tours .explore-travel__record')).toHaveLength(3)
+    page.app.unmount()
+  }, 60000)
+
   it("renders a location's suggested routes, and a route", async () => {
     const ariccia = await collection('mwnf3_explore:location:409')
     const location = await mountOn(`#/location/${ariccia.id}`, '.explore-routes__select')
@@ -473,9 +510,9 @@ describe('website smoke test', () => {
     location.app.unmount()
 
     const route = await collection('mwnf3_explore:itinerary:113')
-    const page = await mountOn(`#/route/${route.id}`, '.explore-tiles__label')
+    const page = await mountOn(`#/route/${route.id}`, '.explore-tiles__name')
     expect(page.host.querySelector('.explore-page__title').textContent.trim()).toBe('Ariccia | Piazza di Corte')
-    expect(page.host.querySelectorAll('.explore-tiles__label')).toHaveLength(9)
+    expect(page.host.querySelectorAll('.explore-tiles__name')).toHaveLength(9)
     page.app.unmount()
   }, 60000)
 
