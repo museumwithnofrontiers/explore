@@ -53,6 +53,10 @@ export default {
 
   siteName,
 
+  // Where the site is deployed: a link to a legacy MWNF site that has a new
+  // one goes to its sibling here (viewer-core's toNewSite, inventory-app#2482).
+  site: { origin: 'https://museumwithnofrontiers.github.io/explore' },
+
   features: {
     // No generic entity pages: those routes expose the data package's shape
     // rather than the site's.
