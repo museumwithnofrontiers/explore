@@ -1,5 +1,6 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, watchEffect } from 'vue'
+import { useRouter } from 'vue-router'
 import { NotFoundView, md, useI18n, useRecordLanguage } from '@museumwnf/viewer-core'
 import ExploreFrame from '../components/ExploreFrame.vue'
 import ExploreMap from '../components/ExploreMap.vue'
@@ -51,11 +52,23 @@ const pins = computed(() =>
 )
 const travel = computed(() => travelFor('theme', legacyId(theme.value)))
 const crumbs = computed(() => [{ label: t('core.nav.home'), to: { name: 'home' } }, { label: title(theme.value, locale.value) }])
+
+// Legacy skipped the theme's own page when the theme covers a single
+// country: its router opened that country, explored by the theme
+// (explore-client router.js, "Skip Theme level if there is only one Country").
+const router = useRouter()
+const onlyCountry = computed(() => {
+  const list = themeCountries(theme.value)
+  return list.length === 1 ? list[0] : null
+})
+watchEffect(() => {
+  if (onlyCountry.value) router.replace(placeLink(onlyCountry.value, { theme: theme.value }))
+})
 </script>
 
 <template>
   <NotFoundView v-if="!theme" />
-  <p v-else-if="!ready" class="explore-loading">{{ t('core.status.loading') }}</p>
+  <p v-else-if="!ready || onlyCountry" class="explore-loading">{{ t('core.status.loading') }}</p>
   <ExploreFrame
     v-else
     :crumbs="crumbs"
@@ -63,17 +76,13 @@ const crumbs = computed(() => [{ label: t('core.nav.home'), to: { name: 'home' }
   >
     <article class="explore-page">
       <h1 class="explore-page__title">{{ name }}</h1>
-      <!-- Legacy named a theme covering a single country again under its name. -->
-      <div v-if="themeCountries(theme).length === 1" class="explore-theme-info">
-        <div class="explore-territories">{{ name }}</div>
-      </div>
       <div class="explore-description">
         <ReadIn :languages="languages" :language="language" @select="select" />
         <div class="explore-page__text explore-prose" :dir="dir || undefined" v-html="description"></div>
       </div>
       <PlaceMenu :travel="travel" />
       <ExploreMap v-if="pins.length" :pins="pins" :zoom="placePosition(theme)?.zoom ?? null" />
-      <ExploreTiles :heading="t('explore.next.country')" :tiles="countryTiles" />
+      <ExploreTiles :heading="t('explore.next.country')" :tiles="countryTiles" kind="country" />
       <TravelRecords :books="travel.books" :tours="travel.tours" />
     </article>
   </ExploreFrame>

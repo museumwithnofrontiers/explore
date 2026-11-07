@@ -173,7 +173,7 @@ const selection = computed(() => ({
       <ExploreMap v-if="pins.length" :pins="pins" :zoom="mapZoom" />
       <SuggestedRoutes :location="location" />
       <ExploreTiles :heading="t('explore.next.location')" :tiles="locationTiles" />
-      <ExploreTiles :heading="t('explore.next.monument')" :tiles="monumentTiles" />
+      <ExploreTiles :heading="t('explore.next.monument')" :tiles="monumentTiles" kind="monument" />
       <TravelRecords :books="travel.books" :tours="travel.tours" />
     </article>
   </ExploreFrame>

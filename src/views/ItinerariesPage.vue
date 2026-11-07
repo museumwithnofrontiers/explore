@@ -3,8 +3,8 @@ import { computed } from 'vue'
 import { NotFoundView, mdInline, useI18n } from '@museumwnf/viewer-core'
 import ExploreFrame from '../components/ExploreFrame.vue'
 import {
-  collectionById, excerpt, itinerariesIn, itinerariesOfTerritory, itineraryLink, itineraryPicture, legacyId, levelOf,
-  text, title, travelFor, recordTexts, useTexts,
+  collectionById, excerpt, itinerariesIn, itinerariesOfTerritory, itineraryLink, itineraryPicture, levelOf,
+  text, title, travelForItinerary, recordTexts, useTexts,
 } from '../composables/explore.js'
 
 // A country's itineraries, legacy's "Itineraries in …": each one's picture,
@@ -33,8 +33,15 @@ const territory = computed(() => {
 
 const entries = computed(() =>
   itinerariesOfTerritory(itinerariesIn(country.value), territory.value).map((itinerary) => {
-    const travel = travelFor('itinerary', legacyId(itinerary))
+    // Each itinerary's own, as legacy's ItineraryCountryItineraryResource: those
+    // of the monuments it holds; a tour named with its places after a comma
+    // (ItineraryList.vue).
+    const travel = travelForItinerary(itinerary)
     const titleOf = (record) => mdInline(recordTexts(record, locale.value).title ?? '')
+    const tourTitle = (record) => {
+      const subtitle = recordTexts(record, locale.value).subtitle
+      return subtitle ? `${titleOf(record)}, ${mdInline(subtitle)}` : titleOf(record)
+    }
     return {
       id: itinerary.id,
       name: title(itinerary, locale.value),
@@ -42,7 +49,7 @@ const entries = computed(() =>
       image: itineraryPicture(itinerary),
       to: itineraryLink(itinerary),
       books: travel.books.map((b) => ({ id: b.id, title: titleOf(b), href: recordTexts(b, locale.value).read_more })),
-      tours: travel.tours.map((r) => ({ id: r.id, title: titleOf(r), href: recordTexts(r, locale.value).read_more })),
+      tours: travel.tours.map((r) => ({ id: r.id, title: tourTitle(r), href: recordTexts(r, locale.value).read_more })),
     }
   }),
 )
@@ -59,7 +66,7 @@ const crumbs = computed(() => [
   <ExploreFrame
     v-else
     :crumbs="crumbs"
-    :selection="{ mode: 'itinerary', country, territory }"
+    :selection="{ mode: 'itinerary', country, territory }"
   >
     <article class="explore-page">
       <h1 class="explore-page__title">{{ t('explore.itinerary.inCountry') }} {{ title(country, locale) }}</h1>

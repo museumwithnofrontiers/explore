@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { NotFoundView, mdInline, useI18n, useRecordLanguage } from '@museumwnf/viewer-core'
+import { GlossaryPopover } from '@museumwnf/viewer-layout/content'
 import ExploreFrame from '../components/ExploreFrame.vue'
 import ExploreMap from '../components/ExploreMap.vue'
 import LocalTeam from '../components/LocalTeam.vue'
@@ -9,8 +10,8 @@ import ReadMoreText from '../components/ReadMoreText.vue'
 import TravelRecords from '../components/TravelRecords.vue'
 import {
   collectionById, describedLanguages, itineraryCountries, itineraryLocations, itineraryPicture, itinerariesLink,
-  legacyCut, legacyId, placePosition, roman, subItinerariesOf, subItineraryLink, text, title, travelFor,
-  useCollectionLanguages, useTexts,
+  legacyCut, localTeamOf, placePosition, roman, subItinerariesOf, subItineraryLink, text, title, travelForItinerary,
+  useCollectionLanguages, useTextGlossary, useTexts,
 } from '../composables/explore.js'
 
 // A thematic itinerary's page, as legacy's SubItineraryList: its map, each
@@ -40,6 +41,8 @@ const translated = useCollectionLanguages(() => itinerary.value)
 const languages = computed(() => describedLanguages(translated.value, itinerary.value?.id))
 const { language, select, dir } = useRecordLanguage(itinerary, { languages: () => languages.value })
 const own = computed(() => text('collections', itinerary.value?.id, language.value))
+// The glossary terms its introduction reaches, as legacy marked them.
+const { glossary, active, onClick, close, activeHtml } = useTextGlossary(() => own.value.description, () => language.value)
 
 // Legacy showed a sub-itinerary's text on one line: its line breaks as spaces.
 const oneLine = (markdown) => mdInline(String(markdown ?? '').replace(/\s*\n+\s*/g, ' '))
@@ -68,7 +71,9 @@ const pins = computed(() =>
 )
 
 const country = computed(() => itineraryCountries(itinerary.value)[0] ?? null)
-const travel = computed(() => travelFor('itinerary', legacyId(itinerary.value)))
+// Legacy's Travel Books and Tours here: those of the monuments the itinerary
+// holds, its sub-itineraries' included.
+const travel = computed(() => travelForItinerary(itinerary.value))
 const crumbs = computed(() => {
   const trail = [{ label: t('core.nav.home'), to: { name: 'home' } }]
   if (country.value) trail.push({ label: title(country.value, locale.value), to: itinerariesLink(country.value) })
@@ -85,11 +90,11 @@ const crumbs = computed(() => {
     :crumbs="crumbs"
     :selection="{ mode: 'itinerary', country, itinerary }"
   >
-    <article class="explore-page">
+    <article class="explore-page" @click="onClick">
       <h1 class="explore-page__title">{{ title(itinerary, 'en') }}</h1>
       <ExploreMap v-if="pins.length" :pins="pins" />
       <ReadIn :languages="languages" :language="language" @select="select" />
-      <ReadMoreText class="explore-page__text" :text="own.description ?? ''" :chars="DESCRIPTION_LENGTH" :dir="dir" />
+      <ReadMoreText class="explore-page__text" :text="own.description ?? ''" :chars="DESCRIPTION_LENGTH" :dir="dir" :glossary="glossary" />
 
       <section v-if="subs.length" class="explore-subs">
         <h2 class="explore-subs__heading">{{ subs.length }} {{ t('explore.itinerary.subItineraries') }}</h2>
@@ -104,8 +109,9 @@ const crumbs = computed(() => {
         </article>
       </section>
 
-      <LocalTeam :team="own.extra?.local_team ?? ''" :dir="dir" />
+      <LocalTeam :team="localTeamOf(itinerary, translated)" :dir="dir" />
       <TravelRecords :books="travel.books" :tours="travel.tours" />
+      <GlossaryPopover :term="active" :html="activeHtml" @close="close" />
     </article>
   </ExploreFrame>
 </template>
