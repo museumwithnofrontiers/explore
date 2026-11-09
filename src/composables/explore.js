@@ -729,6 +729,17 @@ export function itinerariesOfTerritory(list, territory) {
   return list.filter((i) => [i, ...childrenOf(i.id)].some((r) => itineraryTerritoryIds(r).includes(id)))
 }
 
+/**
+ * Where a country's list of itineraries pins an itinerary: at the first
+ * location of its first sub-itinerary (of the territory, when one is chosen),
+ * as legacy's ItineraryCountryItineraryResource placed it.
+ */
+export function itineraryListPosition(itinerary, territory = null) {
+  const id = territory ? legacyId(territory) : null
+  const sub = subItinerariesOf(itinerary).find((s) => id == null || itineraryTerritoryIds(s).includes(id))
+  return sub ? placePosition(itineraryLocations(sub)[0]) : null
+}
+
 // ── Site records ─────────────────────────────────────────────────────────
 
 export const siteRecords = computed(() => tree.value.root?.extra ?? {})
@@ -763,14 +774,20 @@ export function scoped(record, level, id) {
 
 /**
  * The travel layer on one page. Monument pages show no Travel Book and no
- * Tour, whatever their scope (the analysis doc's "Site records").
+ * Tour, whatever their scope (the analysis doc's "Site records"). A country
+ * reached by a theme (`themeId`, its legacy id) shows only the Travel Books
+ * scoped to that theme too, as legacy's CountryResource asked for them
+ * (`getBooksUsingCountryIds($country, $theme)`); its Tours stay the country's.
  */
-export function travelFor(level, id) {
+export function travelFor(level, id, themeId = null) {
   const travel = siteRecords.value.explore_travel ?? {}
   const pick = (list) => (list ?? []).filter((r) => scoped(r, level, id))
   const byOrder = (a, b) => (a.order ?? a.id) - (b.order ?? b.id)
+  const books = level === 'country' && themeId != null
+    ? pick(travel.books).filter((r) => scoped(r, 'theme', themeId))
+    : pick(travel.books)
   return {
-    books: level === 'monument' ? [] : pick(travel.books),
+    books: level === 'monument' ? [] : books,
     tours: level === 'monument' ? [] : pick(travel.tours),
     accommodations: pick(travel.accommodations).sort(byOrder),
     guidedVisits: pick(travel.guided_visits).sort(byOrder),

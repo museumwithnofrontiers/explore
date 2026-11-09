@@ -151,6 +151,9 @@ const row = (key, name, placeholder, options, value, pick, disabled = !options.l
 const rows = computed(() => {
   const territoryRow = () =>
     row('territories', t('explore.select.territories'), t('explore.select.pickTerritory'), territoryOptions.value, props.territory?.id ?? '', pickTerritory, !props.country)
+  // Legacy's setDisabled: no monument to pick until a location is chosen.
+  const monumentRow = () =>
+    row('monuments', t('explore.select.monuments'), t('explore.select.pickMonument'), monuments.value, monumentValue.value, pickMonument, !props.location || !monuments.value.length)
   const list =
     props.mode === 'theme'
       ? [
@@ -158,7 +161,7 @@ const rows = computed(() => {
           row('countries', t('explore.select.countries'), t('explore.select.pickCountry'), countryOptions.value, props.country?.id ?? '', pickCountry),
           steps.value.territories && territoryRow(),
           row('locations', t('explore.select.locations'), t('explore.select.pickLocation'), locationOptions.value, props.location?.id ?? '', pickLocation),
-          row('monuments', t('explore.select.monuments'), t('explore.select.pickMonument'), monuments.value, monumentValue.value, pickMonument),
+          monumentRow(),
         ]
       : props.mode === 'itinerary'
         ? [
@@ -174,7 +177,7 @@ const rows = computed(() => {
             steps.value.filters && row('filters', t('explore.select.filters'), t('explore.select.pickFilter'), filterOptions.value, props.filter, pickFilter),
             steps.value.territories && territoryRow(),
             row('locations', t('explore.select.locations'), t('explore.select.pickLocation'), locationOptions.value, props.location?.id ?? '', pickLocation),
-            row('monuments', t('explore.select.monuments'), t('explore.select.pickMonument'), monuments.value, monumentValue.value, pickMonument),
+            monumentRow(),
           ]
   return list.filter(Boolean)
 })

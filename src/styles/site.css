@@ -349,7 +349,9 @@
   font-size: 16px;
   line-height: 18px;
 }
-.explore-select__note { margin: 0; line-height: normal; }
+/* Legacy's SideNavigation gives its sentence and the partnerships under it no
+   colour of their own: the browser's black. */
+.explore-select__note { margin: 0; line-height: normal; color: #000000; }
 .explore-select__home { color: var(--explore-green); text-decoration: none; }
 @media only screen and (max-width: 1199px) {
   .explore-select__title { border: 1px solid var(--explore-green); }
@@ -367,7 +369,7 @@
 .explore-partnerships__entry { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; color: inherit; text-decoration: none; }
 .explore-partnerships__logo { max-width: 8rem; max-height: 5rem; object-fit: contain; }
 .explore-partnerships__title { font-size: 0.875rem; }
-.explore-partnerships--side { display: block; margin: 0; padding: 10px 20px 30px; }
+.explore-partnerships--side { display: block; margin: 0; padding: 10px 20px 30px; color: #000000; }
 .explore-partnerships--side .explore-partnerships__entry { gap: 0; font-size: 14px; line-height: 16px; }
 .explore-partnerships--side .explore-partnerships__logo {
   width: 85px;
@@ -559,8 +561,8 @@
 /* Legacy's BooksTours.vue: the label in the headings' Muli, bold, 28/35px
    navy, 30px over it and 20px under; each record a 200px card with a light
    shadow, 20px under it, its picture 165px wide (dark green where it has
-   none), its text 30px in, in Roboto Condensed 14/16px dark grey, the title
-   bold in the browser's link blue, the presentation 10px under it. Below
+   none), its text 30px in, 14/16px dark grey, the title bold in the browser's
+   link blue, the presentation 10px under it. Below
    625px the card stacks, its picture 175px high and contained. */
 .explore-travel { width: 100%; }
 .explore-travel__heading {
@@ -597,6 +599,12 @@
   line-height: 16px;
   color: #4a4a4a;
 }
+/* The title and the presentation have no font of their own in legacy's
+   BooksTours.vue, so its App.vue rule for every element (`* { Muli }`) drew
+   them in Muli, at the card's size. */
+.explore-travel__title,
+.explore-travel__intro,
+.explore-travel__intro * { font-family: 'Mulish', 'Muli', sans-serif; }
 .explore-travel__title { font-weight: bold; color: #0000ee; text-decoration: none; }
 a.explore-travel__title:hover { text-decoration: underline; }
 .explore-travel__intro { margin-top: 10px; }
@@ -723,15 +731,94 @@ a.explore-travel__title:hover { text-decoration: underline; }
 
 /* ── Itineraries ────────────────────────────────────────────────────────── */
 
-.explore-itinerary { display: flex; gap: var(--mwnf-space); padding: var(--mwnf-space) 0; border-top: var(--mwnf-section-border); }
-.explore-itinerary__image { flex: 0 0 12rem; width: 12rem; height: 8rem; object-fit: cover; }
-.explore-itinerary__body { flex: 1; min-width: 0; }
-.explore-itinerary__name { margin: 0 0 0.5rem; color: var(--explore-navy); font-size: 1.25rem; }
-.explore-itinerary__name a { color: var(--explore-green); }
-.explore-itinerary__description { margin: 0 0 0.5rem; }
-.explore-itinerary__label { margin: var(--mwnf-space) 0 0.25rem; font-size: 1rem; }
-.explore-itinerary__record { margin: 0; }
-.explore-itinerary__record a { color: var(--explore-green); }
+/* Legacy's ItineraryList.vue: each itinerary a card on a light shadow, 20px
+   under it; its picture 500px high over 30% of the card (dark green where it
+   has none), its text 30px in over the rest; the name in the headings' Muli,
+   bold, 28/35px navy, 10px over the text; the text, the labels (bold) and the
+   links (dark green) in Roboto Condensed 16/18px dark grey, 20px apart; the
+   link to the itinerary a dark green bar 40px high across the text, rounded
+   10px, its words in Muli bold 18/23px white. Smaller below 900px, stacked
+   below 750px. */
+.explore-itinerary {
+  display: flex;
+  width: 100%;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px var(--explore-light-grey);
+}
+.explore-itinerary__image {
+  flex: none;
+  width: 30%;
+  height: 500px;
+  margin-right: 10px;
+  background-color: var(--explore-green);
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+.explore-itinerary__body { width: 70%; min-width: 0; margin-left: 10px; padding: 30px; }
+.explore-itinerary .explore-itinerary__name {
+  margin: 0 0 10px;
+  font-family: 'Mulish', 'Muli', sans-serif;
+  font-size: 28px;
+  line-height: 35px;
+  font-weight: bold;
+  color: var(--explore-navy);
+}
+.explore-itinerary__description,
+.explore-itinerary__description *,
+.explore-itinerary__travel,
+.explore-itinerary__travel * {
+  font-family: 'Roboto Condensed', sans-serif;
+  font-size: 16px;
+  line-height: 18px;
+  color: #4a4a4a;
+}
+.explore-itinerary__description,
+.explore-itinerary__travel { margin-bottom: 20px; }
+.explore-itinerary__more {
+  display: flex;
+  height: 40px;
+  width: 100%;
+  margin-bottom: 20px;
+  border-radius: 10px;
+  background-color: var(--explore-green);
+}
+.explore-itinerary__more a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-family: 'Mulish', 'Muli', sans-serif;
+  font-size: 18px;
+  line-height: 23px;
+  font-weight: bold;
+  color: #ffffff;
+  text-decoration: none;
+}
+.explore-itinerary__travel .explore-itinerary__label { font-weight: bold; }
+.explore-itinerary__record { margin-top: 5px; }
+.explore-itinerary__travel .explore-itinerary__record a,
+.explore-itinerary__travel .explore-itinerary__record a * { color: var(--explore-green); text-decoration: none; }
+.explore-itinerary__record a:hover { text-decoration: underline; }
+@media only screen and (max-width: 899px) {
+  .explore-itinerary__image { height: 400px; }
+  .explore-itinerary .explore-itinerary__name { font-size: 20px; line-height: 25px; }
+  .explore-itinerary__more a { font-size: 16px; line-height: 18px; }
+  .explore-itinerary__description,
+  .explore-itinerary__description *,
+  .explore-itinerary__travel,
+  .explore-itinerary__travel * { font-size: 14px; line-height: 16px; }
+}
+@media only screen and (max-width: 749px) {
+  .explore-itinerary { flex-direction: column; }
+  .explore-itinerary__image { width: 100%; height: 300px; margin-right: 0; background-size: contain; }
+  .explore-itinerary__body { width: 100%; margin-left: 0; }
+}
+@media only screen and (max-width: 499px) {
+  .explore-itinerary__image { height: 200px; }
+  .explore-itinerary__more a { font-size: 14px; line-height: 16px; text-align: center; }
+}
 .explore-subs__heading { font-size: 1.5rem; margin: calc(var(--mwnf-space) * 2) 0 var(--mwnf-space); }
 
 /* Legacy's texts (explore-client DescriptionComponent, SubItineraryList.vue,
@@ -752,6 +839,15 @@ a.explore-travel__title:hover { text-decoration: underline; }
   color: #4a4a4a;
 }
 .explore-read-more { margin-bottom: 20px; }
+/* A theme's and a place's "Read in" (legacy's ExplorePage) has no style of
+   its own: App.vue's Muli, at the page's 16px, in the browser's black. */
+.explore-description .explore-read-in,
+.explore-description .explore-read-in select {
+  font-family: 'Mulish', 'Muli', sans-serif;
+  font-size: 16px;
+  line-height: normal;
+  color: #000000;
+}
 .explore-read-more__toggle { font-weight: bold; text-decoration: underline; cursor: pointer; }
 .explore-subs .explore-subs__heading {
   margin: 30px 0 20px;
@@ -906,10 +1002,6 @@ a.explore-travel__title:hover { text-decoration: underline; }
 .explore-routes__heading { font-size: 1.5rem; margin: 0 0 var(--mwnf-space); }
 .explore-routes__select { max-width: 24rem; padding: 0.4rem; font: inherit; }
 
-@media (max-width: 48rem) {
-  .explore-itinerary { flex-direction: column; }
-  .explore-itinerary__image { width: 100%; height: auto; aspect-ratio: 3 / 2; }
-}
 .explore-monument__back { margin: 0 0 0.5rem; }
 .explore-monument__back a { color: var(--explore-green); font-weight: 600; }
 

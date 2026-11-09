@@ -471,6 +471,15 @@ describe('website smoke test', () => {
     expect(page.router.currentRoute.value.name).toBe('country')
     expect(page.router.currentRoute.value.query.theme).toBe(theme.id)
     expect(page.host.querySelector('.explore-page__title').textContent.trim()).toBe('Palestine')
+    // Its description is the theme's own (CountryResource, a single-country theme).
+    expect(page.host.querySelector('.explore-description .explore-page__text')?.textContent.trim())
+      .toMatch(/^Throughout history Palestine has witnessed different eras and civilisations\./)
+    // Its Travel Books are the country's scoped to the theme too: none; its Tour the country's.
+    expect(page.host.querySelectorAll('.explore-travel--books .explore-travel__record')).toHaveLength(0)
+    expect(page.host.querySelectorAll('.explore-travel--tours .explore-travel__record')).toHaveLength(1)
+    // No monument to pick until a location is chosen (SideNavigation's setDisabled).
+    expect(page.host.querySelector('#explore-select-monuments').disabled).toBe(true)
+    expect(page.host.querySelector('#explore-select-locations').disabled).toBe(false)
     page.app.unmount()
   }, 60000)
 
@@ -482,12 +491,18 @@ describe('website smoke test', () => {
     // Legacy's BooksTours: no subtitle line under a record's title.
     expect(page.host.querySelector('.explore-travel__subtitle')).toBeNull()
     await vi.waitFor(() => expect(texts(page.host, '.explore-page__text .gloss-term')).toContain('Reconquista'), { timeout: 30000 })
+    // A sub-itinerary's cut text keeps its line breaks, as the live site prints it.
+    const jalon = [...page.host.querySelectorAll('.explore-sub-card__description')].find((d) => d.textContent.includes('River Jalón'))
+    expect(jalon.innerHTML).toMatch(/17th century\.<br>\s*<br>\s*The objective/)
     page.app.unmount()
 
-    // A country's list gives each itinerary its own, the same way.
+    // A country's list gives each itinerary its own, the same way, under the
+    // map that pins each itinerary at its first location.
     const spain = await collection('mwnf3_explore:country:es')
     const list = await mountOn(`#/country/${spain.id}/itineraries`, '.explore-itinerary')
     expect(list.host.querySelectorAll('.explore-itinerary__record').length).toBeGreaterThan(0)
+    expect(list.host.querySelector('.explore-itinerary__more a')?.textContent.trim()).toBe('Read More')
+    await vi.waitFor(() => expect(list.host.querySelectorAll('.explore-map path.leaflet-interactive').length).toBe(1))
     list.app.unmount()
   }, 90000)
 

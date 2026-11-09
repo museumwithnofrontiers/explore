@@ -57,13 +57,20 @@ const location = computed(() => (level.value === 'location' ? place.value : null
 // theme's own text about it instead of its own. A location's own text is its
 // historical background, in the tab menu.
 const byThemeText = computed(() => Boolean(theme.value) && level.value === 'country')
+// A theme covering this one country gave it the theme's own description, in
+// the theme's languages (legacy's CountryResource: `Theme::find()->translations`
+// when the theme has a single country, `thematiccycledetails` otherwise).
+const byOwnThemeText = computed(() => byThemeText.value && themeCountries(theme.value).length === 1)
 const translated = useCollectionLanguages(() => place.value)
+const themeTranslated = useCollectionLanguages(() => (byOwnThemeText.value ? theme.value : null))
 const languages = computed(() =>
   level.value === 'location'
     ? []
-    : byThemeText.value
-      ? themeCountryLanguages(theme.value, place.value)
-      : translated.value,
+    : byOwnThemeText.value
+      ? themeTranslated.value
+      : byThemeText.value
+        ? themeCountryLanguages(theme.value, place.value)
+        : translated.value,
 )
 const { language, select, dir } = useRecordLanguage(place, { languages: () => languages.value })
 // Each language's own row: legacy showed an empty description empty.
@@ -81,7 +88,11 @@ const singleCountryTheme = computed(() =>
   theme.value && level.value !== 'location' && themeCountries(theme.value).length === 1 ? title(theme.value, 'en') : '',
 )
 const themeText = computed(() =>
-  byThemeText.value ? md(themeCountryText(theme.value, place.value, language.value)) : '',
+  byOwnThemeText.value
+    ? md(ownText('collections', theme.value.id, language.value).description)
+    : byThemeText.value
+      ? md(themeCountryText(theme.value, place.value, language.value))
+      : '',
 )
 const description = computed(() => (level.value === 'location' || byThemeText.value ? '' : md(own.value.description)))
 
@@ -130,7 +141,7 @@ const pins = computed(() =>
 )
 const mapZoom = computed(() => placePosition(place.value)?.zoom ?? null)
 
-const travel = computed(() => travelFor(level.value, legacyId(place.value)))
+const travel = computed(() => travelFor(level.value, legacyId(place.value), theme.value ? legacyId(theme.value) : null))
 const crumbs = computed(() => {
   const trail = [{ label: t('core.nav.home'), to: { name: 'home' } }]
   if (theme.value) trail.push({ label: title(theme.value, locale.value), to: themeLink(theme.value) })
