@@ -2,14 +2,17 @@
 import { computed } from 'vue'
 import { NotFoundView, mdInline, useI18n } from '@museumwnf/viewer-core'
 import ExploreFrame from '../components/ExploreFrame.vue'
+import ExploreMap from '../components/ExploreMap.vue'
 import {
-  collectionById, excerpt, itinerariesIn, itinerariesOfTerritory, itineraryLink, itineraryPicture, levelOf,
-  text, title, travelForItinerary, recordTexts, useTexts,
+  collectionById, itinerariesIn, itinerariesOfTerritory, itineraryLink, itineraryListPosition, itineraryPicture,
+  legacyCut, legacyLines, levelOf, placePosition, text, title, travelForItinerary, recordTexts, useTexts,
 } from '../composables/explore.js'
 
-// A country's itineraries, legacy's "Itineraries in …": each one's picture,
-// its name, the start of its introduction, the link to it, and the Travel
-// Books and Tours scoped to it.
+// A country's itineraries, as legacy's ExplorePage drew "Itineraries in …":
+// its map, each itinerary pinned at its first location, never closer than the
+// country's own zoom; then ItineraryList.vue's card for each, its picture, its
+// name, the start of its introduction, the bar leading to it, and the Travel
+// Books and Tours of the monuments it holds, each a link.
 const props = defineProps({
   id: { type: String, required: true },
   /** A territory of the country: its itineraries only, as legacy's `/itineraries/c-…/tr-…`. */
@@ -42,17 +45,23 @@ const entries = computed(() =>
       const subtitle = recordTexts(record, locale.value).subtitle
       return subtitle ? `${titleOf(record)}, ${mdInline(subtitle)}` : titleOf(record)
     }
+    const description = text('collections', itinerary.id, locale.value).description
     return {
       id: itinerary.id,
       name: title(itinerary, locale.value),
-      description: excerpt(text('collections', itinerary.id, locale.value).description, DESCRIPTION_LENGTH),
+      // Printed as it came, cut, its line breaks kept.
+      description: description ? legacyLines(legacyCut(description, DESCRIPTION_LENGTH).text) : '',
       image: itineraryPicture(itinerary),
       to: itineraryLink(itinerary),
+      at: itineraryListPosition(itinerary, territory.value),
       books: travel.books.map((b) => ({ id: b.id, title: titleOf(b), href: recordTexts(b, locale.value).read_more })),
       tours: travel.tours.map((r) => ({ id: r.id, title: tourTitle(r), href: recordTexts(r, locale.value).read_more })),
     }
   }),
 )
+
+const pins = computed(() => entries.value.flatMap((e) => (e.at ? [{ ...e.at, label: e.name, to: e.to }] : [])))
+const mapZoom = computed(() => placePosition(country.value)?.zoom ?? null)
 
 const crumbs = computed(() => [
   { label: t('core.nav.home'), to: { name: 'home' } },
@@ -70,26 +79,29 @@ const crumbs = computed(() => [
   >
     <article class="explore-page">
       <h1 class="explore-page__title">{{ t('explore.itinerary.inCountry') }} {{ title(country, locale) }}</h1>
+      <ExploreMap v-if="pins.length" :pins="pins" :zoom="mapZoom" />
       <article v-for="entry in entries" :key="entry.id" class="explore-itinerary">
-        <img v-if="entry.image" class="explore-itinerary__image" :src="entry.image" alt="" loading="lazy" />
+        <div class="explore-itinerary__image" :style="entry.image ? { backgroundImage: `url(${entry.image})` } : {}"></div>
         <div class="explore-itinerary__body">
           <h2 class="explore-itinerary__name">{{ entry.name }}</h2>
-          <p v-if="entry.description" class="explore-itinerary__description">{{ entry.description }}</p>
-          <RouterLink class="explore-button" :to="entry.to">{{ t('explore.itinerary.readMore') }}</RouterLink>
-          <template v-if="entry.books.length">
-            <h3 class="explore-itinerary__label">{{ entry.books.length > 1 ? t('explore.travel.books') : t('explore.travel.book') }}</h3>
-            <p v-for="book in entry.books" :key="book.id" class="explore-itinerary__record">
+          <div v-if="entry.description" class="explore-itinerary__description" v-html="entry.description"></div>
+          <div class="explore-itinerary__more">
+            <RouterLink :to="entry.to">{{ t('explore.itinerary.readMore') }}</RouterLink>
+          </div>
+          <div v-if="entry.books.length" class="explore-itinerary__travel">
+            <div class="explore-itinerary__label">{{ entry.books.length > 1 ? t('explore.travel.books') : t('explore.travel.book') }}</div>
+            <div v-for="book in entry.books" :key="book.id" class="explore-itinerary__record">
               <a v-if="book.href" :href="book.href" target="_blank" rel="noopener" v-html="book.title"></a>
               <span v-else v-html="book.title"></span>
-            </p>
-          </template>
-          <template v-if="entry.tours.length">
-            <h3 class="explore-itinerary__label">{{ entry.tours.length > 1 ? t('explore.travel.tours') : t('explore.travel.tour') }}</h3>
-            <p v-for="tour in entry.tours" :key="tour.id" class="explore-itinerary__record">
+            </div>
+          </div>
+          <div v-if="entry.tours.length" class="explore-itinerary__travel">
+            <div class="explore-itinerary__label">{{ entry.tours.length > 1 ? t('explore.travel.tours') : t('explore.travel.tour') }}</div>
+            <div v-for="tour in entry.tours" :key="tour.id" class="explore-itinerary__record">
               <a v-if="tour.href" :href="tour.href" target="_blank" rel="noopener" v-html="tour.title"></a>
               <span v-else v-html="tour.title"></span>
-            </p>
-          </template>
+            </div>
+          </div>
         </div>
       </article>
     </article>

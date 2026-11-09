@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { NotFoundView, mdInline, useI18n, useRecordLanguage } from '@museumwnf/viewer-core'
+import { NotFoundView, useI18n, useRecordLanguage } from '@museumwnf/viewer-core'
 import { GlossaryPopover } from '@museumwnf/viewer-layout/content'
 import ExploreFrame from '../components/ExploreFrame.vue'
 import ExploreMap from '../components/ExploreMap.vue'
@@ -10,7 +10,7 @@ import ReadMoreText from '../components/ReadMoreText.vue'
 import TravelRecords from '../components/TravelRecords.vue'
 import {
   collectionById, describedLanguages, itineraryCountries, itineraryLocations, itineraryPicture, itinerariesLink,
-  legacyCut, localTeamOf, placePosition, roman, subItinerariesOf, subItineraryLink, text, title, travelForItinerary,
+  legacyCut, legacyLines, localTeamOf, placePosition, roman, subItinerariesOf, subItineraryLink, text, title, travelForItinerary,
   useCollectionLanguages, useTextGlossary, useTexts,
 } from '../composables/explore.js'
 
@@ -44,9 +44,6 @@ const own = computed(() => text('collections', itinerary.value?.id, language.val
 // The glossary terms its introduction reaches, as legacy marked them.
 const { glossary, active, onClick, close, activeHtml } = useTextGlossary(() => own.value.description, () => language.value)
 
-// Legacy showed a sub-itinerary's text on one line: its line breaks as spaces.
-const oneLine = (markdown) => mdInline(String(markdown ?? '').replace(/\s*\n+\s*/g, ' '))
-
 const subs = computed(() =>
   subItinerariesOf(itinerary.value).map((sub, index) => {
     const texts = text('collections', sub.id, locale.value)
@@ -55,7 +52,9 @@ const subs = computed(() =>
       sub,
       name: `${roman(index + 1)}. ${title(sub, locale.value)}`,
       duration: texts.extra?.duration ?? '',
-      description: oneLine(legacyCut(texts.description, SUB_DESCRIPTION_LENGTH).text),
+      // SubItineraryList.vue printed the cut text as it came, its line breaks
+      // kept (the live site draws them).
+      description: legacyLines(legacyCut(texts.description, SUB_DESCRIPTION_LENGTH).text),
       image: itineraryPicture(sub),
       to: subItineraryLink(sub),
     }
