@@ -15,9 +15,9 @@
     "namespace": "explore"
   },
   "dependencies": {
-    "@museumwnf/explore-data": "^1.0.26",
+    "@museumwnf/explore-data": "^1.0.27",
     "@museumwnf/viewer-core": "^2.23.1",
-    "@museumwnf/viewer-i18n": "^6.20.0",
+    "@museumwnf/viewer-i18n": "^6.21.0",
     "@museumwnf/viewer-layout": "^3.78.0",
     "leaflet": "^1.9.4",
     "vue": "^3.5.44",
