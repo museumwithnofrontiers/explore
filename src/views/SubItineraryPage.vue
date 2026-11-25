@@ -63,8 +63,8 @@ const own = computed(() => ownText('collections', itinerary.value?.id, language.
 const { glossary, active, onClick, close, activeHtml } = useTextGlossary(() => own.value.description, () => language.value)
 const english = computed(() => text('collections', itinerary.value?.id, 'en'))
 // Legacy credits a text taken from a Travels itinerary to that itinerary's
-// author (`travels_author`, empty when it names none), Explore's own to Explore's.
-const author = computed(() => own.value.extra?.travels_author ?? own.value.extra?.author ?? '')
+// author (`source_text_author`, empty when it names none), Explore's own to Explore's.
+const author = computed(() => own.value.extra?.source_text_author ?? own.value.extra?.author ?? '')
 
 const locations = computed(() => itineraryLocations(itinerary.value))
 const location = computed(
